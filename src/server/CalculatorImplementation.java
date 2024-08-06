@@ -1,9 +1,18 @@
 package server;
 
-public class CalculatorImplementation implements Calculator{
+import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.List;
+
+import static java.lang.Thread.sleep;
+
+public class CalculatorImplementation implements Calculator, Serializable {
+
+    public static List<Integer> stack = new ArrayList<>();
+
     @Override
     public void pushValue(int val) {
-
+        stack.add(val);
     }
 
     @Override
@@ -13,16 +22,21 @@ public class CalculatorImplementation implements Calculator{
 
     @Override
     public int pop() {
-        return 0;
+        return stack.getLast();
     }
 
     @Override
     public boolean isEmpty() {
-        return false;
+        return stack.isEmpty();
     }
 
     @Override
     public int delayPop(int millis) {
-        return 0;
+        try {
+            sleep(1000);
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
+        return this.pop();
     }
 }
