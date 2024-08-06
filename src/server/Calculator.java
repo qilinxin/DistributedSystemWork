@@ -1,16 +1,17 @@
 package server;
 
 import java.rmi.Remote;
+import java.rmi.RemoteException;
 
 public interface Calculator extends Remote {
-    void pushValue(int val);
+    void pushValue(int val) throws RemoteException;
 
-    void pushOperation(String operator);
+    void pushOperation(String operator) throws RemoteException;
 
     int pop();
 
-    boolean isEmpty();
+    boolean isEmpty() throws RemoteException;
 
-    int delayPop(int millis);
+    int delayPop(int millis) throws RemoteException;
 
 }
