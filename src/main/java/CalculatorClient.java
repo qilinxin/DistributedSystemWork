@@ -6,7 +6,7 @@ public class CalculatorClient {
     public static void main(String[] args) {
         try {
             // 查找远程对象
-            CalculatorImplementation calculator = (CalculatorImplementation) Naming.lookup("//localhost/CalculatorService");
+            Calculator calculator = (Calculator) Naming.lookup("//localhost/CalculatorService");
 
             // 调用远程方法
             System.out.println(calculator.isEmpty());
