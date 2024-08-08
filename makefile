@@ -14,5 +14,5 @@ all: $(CLASSES)
 #     rm -f src/main/java/com/example/*.class
 
 # 规则
-# src/main/java/com/example/%.class: src/main/java/com/example/%.java
-#     $(JAVAC) $<
+src/main/java/com/example/%.class: src/main/java/com/example/%.java
+    $(JAVAC) $<git
