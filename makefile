@@ -1,18 +1,19 @@
+# 指定编译器
 JAVAC = javac
 
-# 指定源文件
-SRCS = $(wildcard src/main/java/*.java)
+# 指定源文件目录
+SRC_DIR = src/main/java
 
-# 生成的类文件
-CLASSES = $(SRCS:.java=.class)
+# 获取所有 .java 文件
+SRCS = $(wildcard $(SRC_DIR)/*.java)
 
 # 默认目标
-all: $(CLASSES)
+all: classes
 
-# 清理生成的文件
-# clean:
-#     rm -f src/main/java/com/example/*.class
+# 编译所有 .java 文件为 .class 文件
+classes: $(SRCS)
+		$(JAVAC) -d $(SRC_DIR) $(SRCS)
 
-# 规则
-$(SRC_DIR)/%.class: $(SRC_DIR)/%.java
-	$(JAVAC) $<
+# 清理生成的 .class 文件
+clean:
+		rm -f $(SRC_DIR)/*.class

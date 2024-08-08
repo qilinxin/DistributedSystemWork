@@ -1,4 +1,4 @@
-package work;
+package main.java;
 
 import java.rmi.Naming;
 
@@ -6,7 +6,7 @@ public class CalculatorClient {
     public static void main(String[] args) {
         try {
             // 查找远程对象
-            Calculator calculator = (Calculator) Naming.lookup("//localhost/CalculatorService");
+            CalculatorImplementation calculator = (CalculatorImplementation) Naming.lookup("//localhost/CalculatorService");
 
             // 调用远程方法
             System.out.println(calculator.isEmpty());
