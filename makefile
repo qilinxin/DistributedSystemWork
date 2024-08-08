@@ -10,9 +10,9 @@ CLASSES = $(SRCS:.java=.class)
 all: $(CLASSES)
 
 # 清理生成的文件
-clean:
-    rm -f src/main/java/com/example/*.class
+# clean:
+#     rm -f src/main/java/com/example/*.class
 
 # 规则
-src/main/java/com/example/%.class: src/main/java/com/example/%.java
-    $(JAVAC) $<
+# src/main/java/com/example/%.class: src/main/java/com/example/%.java
+#     $(JAVAC) $<
