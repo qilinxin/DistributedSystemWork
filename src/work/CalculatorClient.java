@@ -1,6 +1,4 @@
-package client;
-
-import server.Calculator;
+package work;
 
 import java.rmi.Naming;
 
