@@ -100,7 +100,7 @@ public class CalculatorImplementation implements Calculator, Serializable {
     // 计算一组数的最大公约数的方法
     private static int calculateGCD() {
         // 从第一个元素开始
-        int gcd = STACK.getFirst();
+        int gcd = STACK.get(0);
         for (int i = 1; i < STACK.size(); i++) {
             gcd = gcd(gcd, STACK.get(i));
         }
