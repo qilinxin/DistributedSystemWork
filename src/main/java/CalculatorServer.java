@@ -4,6 +4,7 @@ import java.rmi.Naming;
 import java.rmi.registry.LocateRegistry;
 
 public class CalculatorServer {
+
     public static void main(String[] args) {
         try {
             // 启动 RMI 注册表（如果没有运行）
@@ -23,7 +24,8 @@ public class CalculatorServer {
             }
         } catch (Exception e) {
             System.out.println("Server exception: " + e.toString());
-            e.printStackTrace();
+            throw new RuntimeException("something wrong with the server, please contact the administrator",
+                    e);
         }
     }
 }
