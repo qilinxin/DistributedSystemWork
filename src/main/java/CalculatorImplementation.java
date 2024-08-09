@@ -55,7 +55,7 @@ public class CalculatorImplementation implements Calculator, Serializable {
 
     @Override
     public int pop() {
-        return STACK.getLast();
+        return STACK.get(stackSize() - 1);
     }
 
     @Override
@@ -81,7 +81,7 @@ public class CalculatorImplementation implements Calculator, Serializable {
 
     private static int calculateLCM() {
         // 从第一个元素开始
-        int lcm = STACK.getFirst();
+        int lcm = STACK.get(0);
         for (int i = 1; i < STACK.size(); i++) {
             // 依次计算 LCM
             lcm = lcm(lcm, STACK.get(i));
