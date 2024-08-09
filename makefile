@@ -20,5 +20,5 @@ classes: $(SRCS)
 	$(JAVAC) -d $(SRC_DIR) $(SRCS)
 
 # 清理生成的 .class 文件
-clean:
-	rm -f $(SRC_DIR)/*.class
+# clean:
+# 	rm -f $(SRC_DIR)/*.class
