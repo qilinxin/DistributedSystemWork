@@ -22,7 +22,7 @@ public class CalculatorImplementation implements Calculator, Serializable {
 
     @Override
     public int pop() {
-        return stack.getLast();
+        return stack.get(stack.size()-1);
     }
 
     @Override
