@@ -80,7 +80,7 @@ public class CalculatorImplementation implements Calculator, Serializable {
 //=====================
 
     private static int calculateLCM() {
-        // 从第一个元素开始
+        // from first element
         int lcm = STACK.get(0);
         for (int i = 1; i < STACK.size(); i++) {
             // 依次计算 LCM
@@ -89,20 +89,35 @@ public class CalculatorImplementation implements Calculator, Serializable {
         return lcm;
     }
 
+    /**
+     * private calculate lcm function
+     * @param a first number
+     * @param b second number
+     * @return lcm
+     */
     private static int lcm(int a, int b) {
-        return a * (b / gcd(a, b));
+        return a * (b / gcdFunction(a, b));
     }
 
-    private static int gcd(int a, int b) {
+    /**
+     * private calculate gcd function
+     * @param a first number
+     * @param b second number
+     * @return gcd
+     */
+    private static int gcdFunction(int a, int b) {
         return BigInteger.valueOf(a).gcd(BigInteger.valueOf(b)).intValue();
     }
 
-    // 计算一组数的最大公约数的方法
+    /**
+     * calculate the greatest common divisor of a set of numbers
+     * @return
+     */
     private static int calculateGCD() {
         // 从第一个元素开始
         int gcd = STACK.get(0);
         for (int i = 1; i < STACK.size(); i++) {
-            gcd = gcd(gcd, STACK.get(i));
+            gcd = gcdFunction(gcd, STACK.get(i));
         }
         return gcd;
     }
