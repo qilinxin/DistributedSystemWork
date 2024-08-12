@@ -50,4 +50,10 @@ public interface Calculator extends Remote {
      * @return size
      */
     int stackSize();
+
+    /**
+     * clear the data in the stack
+     * @throws RemoteException e
+     */
+    void clear() throws RemoteException;
 }

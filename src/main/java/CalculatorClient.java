@@ -1,11 +1,16 @@
 package main.java;
 
+import org.junit.Before;
+import org.junit.Test;
+
 import java.rmi.Naming;
+import java.rmi.RemoteException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 
 import static java.lang.Thread.sleep;
+import static org.junit.Assert.*;
 
 public class CalculatorClient {
     public static void main(String[] args) {

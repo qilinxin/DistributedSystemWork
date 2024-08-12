@@ -3,6 +3,7 @@ package main.java;
 import java.math.BigInteger;
 import java.io.Serializable;
 import java.rmi.MarshalException;
+import java.rmi.RemoteException;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -55,7 +56,9 @@ public class CalculatorImplementation implements Calculator, Serializable {
 
     @Override
     public int pop() {
-        return STACK.get(stackSize() - 1);
+        int res =  STACK.get(stackSize() - 1);
+        STACK.remove(stackSize() - 1);
+        return res;
     }
 
     @Override
@@ -75,6 +78,11 @@ public class CalculatorImplementation implements Calculator, Serializable {
 
     public int stackSize() {
         return STACK.size();
+    }
+
+    @Override
+    public void clear() throws RemoteException {
+        STACK.clear();
     }
 
 //=====================
