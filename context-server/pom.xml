@@ -1,0 +1,41 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
+                             https://maven.apache.org/xsd/maven-4.0.0.xsd">
+
+    <modelVersion>4.0.0</modelVersion>
+
+    <!-- 父项目的信息 -->
+    <parent>
+        <groupId>org.adelaide</groupId>
+        <artifactId>Assignment2</artifactId>
+        <version>1.0-SNAPSHOT</version>
+        <relativePath>../pom.xml</relativePath> <!-- 指向父项目的 pom.xml -->
+    </parent>
+
+    <!-- 子模块的 artifactId -->
+    <artifactId>context-server</artifactId> <!-- 例如 aggregation-server -->
+
+    <!-- 子模块的依赖 -->
+    <dependencies>
+        <!-- Spring Boot Starter -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter</artifactId>
+        </dependency>
+
+        <!-- 其他需要的依赖 -->
+    </dependencies>
+
+    <!-- 子模块的插件配置 -->
+    <build>
+        <plugins>
+            <!-- 使用父项目中定义的 Spring Boot Maven 插件 -->
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+            </plugin>
+        </plugins>
+    </build>
+
+</project>
