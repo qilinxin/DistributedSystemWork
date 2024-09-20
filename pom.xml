@@ -15,7 +15,7 @@
     <modules>
         <module>aggregation-server</module>
         <module>context-server</module>
-        <module>client</module>
+
     </modules>
 
     <!-- 父项目的全局属性 -->
@@ -51,6 +51,9 @@
                 </plugin>
             </plugins>
         </pluginManagement>
+
+        <!-- 可选：设置子模块的通用输出路径 -->
+        <directory>${project.basedir}/target</directory>
     </build>
 
 </project>

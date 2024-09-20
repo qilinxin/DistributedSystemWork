@@ -1,4 +1,4 @@
-package main.java.dto;
+package org.adelaide.dto;
 
 public class queryDto {
 }

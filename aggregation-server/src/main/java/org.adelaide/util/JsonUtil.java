@@ -1,4 +1,4 @@
-package main.java.util;
+package org.adelaide.util;
 
 public class JsonUtil {
 }
