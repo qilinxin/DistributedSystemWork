@@ -38,14 +38,18 @@ public class AggregationService {
     // 创建 ScheduledExecutorService，用于定时任务
     private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
 
-    // 启动定时任务，监听 WEATHER_MAP 的数据
+    /**
+     * monitoring WEATHER_MAP info when system start
+     */
     @PostConstruct
     public void startWeatherMapListener() {
         // 每隔 10 秒检查一次 WEATHER_MAP 中的数据
         scheduler.scheduleAtFixedRate(this::monitorWeatherMap, 0, 5, TimeUnit.SECONDS);
     }
 
-    // 定时监听 WEATHER_MAP 中的变化
+    /**
+     * monitor function
+     */
     private void monitorWeatherMap() {
         System.out.println("Monitoring WEATHER_MAP. Current size: " + WEATHER_MAP.size());
         int delCnt = 0;
@@ -69,6 +73,12 @@ public class AggregationService {
         }
     }
 
+    /**
+     * query weather by id
+     * @param clock time
+     * @param id    weatherid
+     * @return      weather info
+     */
     public CommonResult queryWeatherById(int clock, String id) {
         // 处理接收到的时间事件
         lamportClock.receiveEvent(clock);
@@ -83,7 +93,9 @@ public class AggregationService {
         return new CommonResult(200,"", WEATHER_MAP.get(id).getWeatherInfo(), lamportClock.getTime());
     }
 
-    // 使用 @PostConstruct 注解，在 Spring 容器启动完成后执行该方法
+    /**
+     * load all weather info when start system
+     */
     @PostConstruct
     public void loadWeatherData() {
         String projectRootPath = System.getProperty("user.dir");
@@ -113,7 +125,13 @@ public class AggregationService {
         }
     }
 
-    public CommonResult updateWeatherInfo(String weatherInfoStr, int clock) {
+    /**
+     * create or update weather info
+     * @param weatherInfoStr    json str
+     * @param clock             time
+     * @return  update res
+     */
+    public CommonResult saveOrUpdateWeatherInfo(String weatherInfoStr, int clock) {
         // 处理接收到的时间事件
         lamportClock.receiveEvent(clock);
 
@@ -136,10 +154,18 @@ public class AggregationService {
         return new CommonResult(code, clock);
     }
 
+    /**
+     * query cache info to test
+     * @return all info
+     */
     public Map<String, WeatherInfoWrapperDTO> queryCacheInfo() {
         return WEATHER_MAP;
     }
 
+    /**
+     * operate file
+     * @throws IOException ioexception
+     */
     private synchronized void updateFileInfo() throws IOException {
 
         String filePath = Paths.get(PROJECT_ROOT_PATH, "weatherInfoMap.json").toString();

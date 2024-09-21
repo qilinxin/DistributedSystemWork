@@ -18,24 +18,44 @@ public class AggregationController {
     @Autowired
     AggregationService aggregationService;
 
+    /**
+     * test connection between system
+     * @return
+     */
     @GetMapping("/hello")
     @ResponseBody  // 表示直接返回响应体
     public String sayHello() {
         return "Hello from Aggregation Server!";  // 返回字符串作为响应
     }
 
+    /**
+     * query weather info by id
+     * @param clock lamport clock
+     * @param id    weather id
+     * @return  info
+     */
     @GetMapping("/queryWeatherById")
     @ResponseBody
     public CommonResult queryWeatherById(@RequestParam(defaultValue = "0") int clock, @RequestParam(required = false) String id) {
         return aggregationService.queryWeatherById(clock, id);
     }
 
-    @PostMapping("/updateWeatherInfo")
+    /**
+     * create or update weather info
+     * @param weatherInfoStr    json string
+     * @param clock             lamport clock
+     * @return  update res
+     */
+    @PostMapping("/saveOrUpdateWeatherInfo")
     @ResponseBody
-    public CommonResult updateWeatherInfo(@RequestBody String weatherInfoStr, @RequestParam int clock) {
-        return aggregationService.updateWeatherInfo(weatherInfoStr, clock);
+    public CommonResult saveOrUpdateWeatherInfo(@RequestBody String weatherInfoStr, @RequestParam int clock) {
+        return aggregationService.saveOrUpdateWeatherInfo(weatherInfoStr, clock);
     }
 
+    /**
+     * query current living data
+     * @return  all weather
+     */
     @GetMapping("/queryCacheInfo")
     @ResponseBody
     public Map<String, WeatherInfoWrapperDTO> queryCacheInfo() {

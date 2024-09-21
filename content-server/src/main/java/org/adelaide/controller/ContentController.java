@@ -37,10 +37,10 @@ public class ContentController {
     }
 
     // 更新天气信息，同时同步 Lamport Clock
-    @PutMapping("/updateWeatherInfo")
+    @PutMapping("/saveOrUpdateWeatherInfo")
     @ResponseBody  // 表示直接返回响应体
-    public CommonResult updateWeatherInfo(@RequestBody String weatherData) {
-        String url = AggUrl + "/updateWeatherInfo";
+    public CommonResult saveOrUpdateWeatherInfo(@RequestBody String weatherData) {
+        String url = AggUrl + "/saveOrUpdateWeatherInfo";
 
         // 设置请求头
         HttpHeaders headers = new HttpHeaders();
