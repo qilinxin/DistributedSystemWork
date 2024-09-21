@@ -14,7 +14,7 @@
     </parent>
 
     <!-- 子模块的 artifactId -->
-    <artifactId>context-server</artifactId> <!-- 例如 aggregation-server -->
+    <artifactId>content-server</artifactId> <!-- 例如 aggregation-server -->
 
     <!-- 子模块的依赖 -->
     <dependencies>
@@ -30,24 +30,16 @@
             <artifactId>spring-boot-starter-web</artifactId>
         </dependency>
 
-        <dependency>
-            <groupId>io.r2dbc</groupId>
-            <artifactId>r2dbc-spi</artifactId>
-            <version>1.0.0.RELEASE</version> <!-- Use the version compatible with your project -->
-        </dependency>
-
-        <!-- Lombok: 简化 Java 代码, 如自动生成 Getter/Setter -->
-        <dependency>
-            <groupId>org.projectlombok</groupId>
-            <artifactId>lombok</artifactId>
-            <scope>provided</scope>
-        </dependency>
-
         <!-- Test Starter: 用于编写单元测试 -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
             <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.adelaide</groupId>
+            <artifactId>common</artifactId>
         </dependency>
     </dependencies>
 

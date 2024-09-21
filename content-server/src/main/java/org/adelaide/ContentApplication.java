@@ -2,13 +2,12 @@ package org.adelaide;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.boot.builder.SpringApplicationBuilder;
 import org.springframework.context.ConfigurableApplicationContext;
 
 import java.util.HashMap;
 import java.util.Map;
 @SpringBootApplication
-public class ContextApplication {
+public class ContentApplication {
 
     public static void main(String[] args) {
         // Disable JMX before any application instances are started
@@ -27,7 +26,7 @@ public class ContextApplication {
     }
 
     private static ConfigurableApplicationContext startInstance(int port, String instanceName) {
-        SpringApplication app = new SpringApplication(ContextApplication.class);
+        SpringApplication app = new SpringApplication(ContentApplication.class);
 
         // Set different ports and instance names
         Map<String, Object> properties = new HashMap<>();
