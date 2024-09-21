@@ -15,6 +15,7 @@
     <modules>
         <module>aggregation-server</module>
         <module>context-server</module>
+        <module>client</module>
 
     </modules>
 

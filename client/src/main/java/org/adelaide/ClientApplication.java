@@ -3,14 +3,11 @@ package org.adelaide;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.builder.SpringApplicationBuilder;
 
-
 @SpringBootApplication
-public class AggregationApplication {
-
+public class ClientApplication {
     public static void main(String[] args) {
-//        SpringApplication.run(AggregationApplication.class, args);
-        new SpringApplicationBuilder(AggregationApplication.class)
-                .properties("server.port=4567")  // Specify the port
+        new SpringApplicationBuilder(ClientApplication.class)
+                .properties("server.port=6789")  // Specify the port
                 .run(args);
     }
 }
