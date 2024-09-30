@@ -8,12 +8,12 @@ import org.adelaide.dto.CommonResult;
 import org.adelaide.dto.WeatherInfoDTO;
 import org.adelaide.dto.WeatherInfoWrapperDTO;
 import org.adelaide.util.LamportClockUtil;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
-import java.io.FileNotFoundException;
-import java.io.FileReader;
-import java.io.FileWriter;
-import java.io.IOException;
+import java.io.*;
 import java.lang.reflect.Type;
 import java.nio.file.Paths;
 import java.util.HashMap;
@@ -22,117 +22,138 @@ import java.util.Map;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 @Service
 public class AggregationService {
 
+    private static final Logger logger = LoggerFactory.getLogger(AggregationService.class);
+
+
     private static final String PROJECT_ROOT_PATH = System.getProperty("user.dir");
     private static Map<String, WeatherInfoWrapperDTO> WEATHER_MAP = new HashMap<>();
+    private static final AtomicInteger VERSION_ID = new AtomicInteger(0);
     private final Gson gson = new Gson();
-
     private static boolean newFileFlag = false;
 
-    // LamportClockUtil 实例，用于处理 Lamport Clock
-    private final LamportClockUtil lamportClock = new LamportClockUtil();
+    @Value("update_flag")
+    private static boolean Update_Flag;
 
-    // 创建 ScheduledExecutorService，用于定时任务
+    // Create ScheduledExecutorService for periodic tasks
     private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
 
+    // LamportClockUtil instance for handling Lamport Clock
+    private final LamportClockUtil lamportClock = LamportClockUtil.getInstance();
+
     /**
-     * monitoring WEATHER_MAP info when system start
+     * Starts the periodic task to monitor the WEATHER_MAP information when the system starts.
+     * This method is annotated with {@code @PostConstruct} to indicate that it should be run after dependency injection is complete.
      */
     @PostConstruct
     public void startWeatherMapListener() {
-        // 每隔 10 秒检查一次 WEATHER_MAP 中的数据
+        // Check WEATHER_MAP data every 5 seconds
         scheduler.scheduleAtFixedRate(this::monitorWeatherMap, 0, 5, TimeUnit.SECONDS);
     }
 
     /**
-     * monitor function
+     * Monitors the WEATHER_MAP by iterating over its entries and removing those that have not been updated for more than 30 seconds.
+     * If any entries are removed, the updated information is saved back to the file.
      */
     private void monitorWeatherMap() {
         System.out.println("Monitoring WEATHER_MAP. Current size: " + WEATHER_MAP.size());
         int delCnt = 0;
-        // 遍历并检查 WEATHER_MAP 中的数据
+
+        // Iterate over and check the WEATHER_MAP data
         Iterator<Map.Entry<String, WeatherInfoWrapperDTO>> iterator = WEATHER_MAP.entrySet().iterator();
-        while (iterator.hasNext()) {
+        while (iterator.hasNext() && Update_Flag) {
             Map.Entry<String, WeatherInfoWrapperDTO> entry = iterator.next();
             if (System.currentTimeMillis() - entry.getValue().getLastUpdateTime() > 30000) {
-                System.out.println("WeatherInfoDTO: " + entry.getValue().getWeatherInfo().getId() + " removed by outdated ");
-                iterator.remove(); // 安全地删除元素
-                delCnt += 1;
+                System.out.println("WeatherInfoDTO: " + entry.getValue().getWeatherInfo().getId() + " removed due to being outdated");
+                iterator.remove(); // Safely remove element
+                delCnt++;
             }
         }
+
         if (delCnt > 0) {
             try {
                 updateFileInfo();
             } catch (IOException e) {
-                //no message or monitor,so just print error info
+                // No specific handling for monitored update failures, just print error information
                 e.printStackTrace();
             }
         }
     }
 
     /**
-     * query weather by id
-     * @param clock time
-     * @param id    weatherid
-     * @return      weather info
+     * Queries the weather information by its ID and updates the Lamport Clock based on the given clock value.
+     *
+     * @param clock the Lamport clock value received from the client request
+     * @param id    the weather ID used to query the WEATHER_MAP
+     * @return      a {@code CommonResult} containing the queried weather information or an error message if not found
      */
     public CommonResult queryWeatherById(int clock, String id) {
-        // 处理接收到的时间事件
+        // Handle received event time
         lamportClock.receiveEvent(clock);
 
-        // 输出当前时钟值和请求的 ID
+        // Print current clock value and requested ID
         System.out.println("Clock + id ==" + lamportClock.getTime() + ";;" + id);
 
         WeatherInfoWrapperDTO res = WEATHER_MAP.get(id);
         if (res == null || res.getWeatherInfo() == null) {
             return new CommonResult(500, "weather info not found, please check");
         }
-        return new CommonResult(200,"", WEATHER_MAP.get(id).getWeatherInfo(), lamportClock.getTime());
+        return new CommonResult(200, "", res.getWeatherInfo(), lamportClock.getTime());
     }
 
     /**
-     * load all weather info when start system
+     * Loads weather information from a JSON file during system startup.
+     * If the file is not found, an empty WEATHER_MAP is initialized.
+     * This method is annotated with {@code @PostConstruct} to indicate that it should run after dependency injection is complete.
      */
     @PostConstruct
     public void loadWeatherData() {
-        String projectRootPath = System.getProperty("user.dir");
-        String filePath = Paths.get(projectRootPath, "weatherInfoMap.json").toString();
+        // Load the file from the resources directory
+        try (InputStream inputStream = getClass().getClassLoader().getResourceAsStream("weatherInfoMap.json")) {
+            if (inputStream != null) {
+                try (InputStreamReader reader = new InputStreamReader(inputStream)) {
+                    Type weatherMapType = new TypeToken<Map<String, WeatherInfoWrapperDTO>>() {}.getType();
+                    WEATHER_MAP.putAll(gson.fromJson(reader, weatherMapType));
 
-        try (FileReader reader = new FileReader(filePath)) {
-            Type weatherMapType = new TypeToken<Map<String, WeatherInfoDTO>>() {}.getType();
-            WEATHER_MAP = gson.fromJson(reader, weatherMapType);
-
-            if (WEATHER_MAP != null) {
-                System.out.println("成功加载 weatherInfoMap，共 " + WEATHER_MAP.size() + " 条记录。");
+                    if (!WEATHER_MAP.isEmpty()) {
+                        // Retrieve maximum version number and set it, default to 1 if not present
+                        VERSION_ID.set(WEATHER_MAP.values().stream()
+                                .mapToInt(WeatherInfoWrapperDTO::getVersionId)
+                                .max()
+                                .orElse(1));
+                        System.out.println("Successfully loaded weatherInfoMap, total records: " + WEATHER_MAP.size());
+                    } else {
+                        System.out.println("Invalid weatherInfoMap.json content, initializing empty WEATHER_MAP.");
+                        newFileFlag = true;
+                    }
+                }
             } else {
-                System.out.println("weatherInfoMap.json 文件内容无效，初始化空的 WEATHER_MAP。");
-                WEATHER_MAP = new HashMap<>();
+                // File not found in resources
+                System.out.println("File not found in resources, creating a new empty WEATHER_MAP.");
                 newFileFlag = true;
             }
-        } catch (FileNotFoundException e) {
-            // 文件不存在时，初始化一个新的空 map
-            System.out.println("文件未找到，创建一个新的空的 WEATHER_MAP。");
-            WEATHER_MAP = new HashMap<>();
-            newFileFlag = true;
         } catch (IOException e) {
-            // 捕获其他 IO 错误
-            System.out.println("未能加载 weatherInfoMap.json 文件，可能文件不存在或读取失败。");
-            e.printStackTrace();  // 打印详细错误堆栈
+            // Catch other IO errors
+            System.out.println("Failed to load weatherInfoMap.json file, it may not exist or failed to read.");
             newFileFlag = true;
         }
+        logger.info(gson.toJson(WEATHER_MAP));
     }
 
     /**
-     * create or update weather info
-     * @param weatherInfoStr    json str
-     * @param clock             time
-     * @return  update res
+     * Creates or updates the weather information in the WEATHER_MAP.
+     * The Lamport Clock is incremented during this update to track the logical time of the event.
+     *
+     * @param weatherInfoStr JSON string representing the weather information
+     * @param clock          the Lamport clock value received from the client request
+     * @return               a {@code CommonResult} indicating whether the operation was successful or failed
      */
     public CommonResult saveOrUpdateWeatherInfo(String weatherInfoStr, int clock) {
-        // 处理接收到的时间事件
+        // Handle received event time
         lamportClock.receiveEvent(clock);
 
         WeatherInfoDTO weatherInfo = gson.fromJson(weatherInfoStr, WeatherInfoDTO.class);
@@ -140,37 +161,42 @@ public class AggregationService {
             return new CommonResult(204, "weather data error, please check!");
         }
 
-        // 记录更新事件时递增 Lamport Clock
+        // Increment Lamport Clock when recording an update event
         int currentClock = lamportClock.increment();
         System.out.println("Updating weather info with Lamport clock: " + currentClock);
         int code = newFileFlag ? 201 : 200;
         newFileFlag = false;
-        WEATHER_MAP.put(weatherInfo.getId(), new WeatherInfoWrapperDTO(weatherInfo));
+        WEATHER_MAP.put(weatherInfo.getId(), new WeatherInfoWrapperDTO(weatherInfo, VERSION_ID.incrementAndGet()));
         try {
             this.updateFileInfo();
-        }catch (IOException e) {
+        } catch (IOException e) {
             code = 500;
         }
         return new CommonResult(code, clock);
     }
 
     /**
-     * query cache info to test
-     * @return all info
+     * Queries all cached weather information in the WEATHER_MAP.
+     *
+     * @return a map of all weather information currently stored in the cache
      */
     public Map<String, WeatherInfoWrapperDTO> queryCacheInfo() {
+        if (WEATHER_MAP.isEmpty()) {
+            loadWeatherData();
+        }
         return WEATHER_MAP;
     }
 
     /**
-     * operate file
-     * @throws IOException ioexception
+     * Writes the current WEATHER_MAP data to the weatherInfoMap.json file.
+     * The method is synchronized to ensure thread safety when multiple threads attempt to write the file concurrently.
+     *
+     * @throws IOException if the file operation fails, such as issues with writing to disk
      */
     private synchronized void updateFileInfo() throws IOException {
-
         String filePath = Paths.get(PROJECT_ROOT_PATH, "weatherInfoMap.json").toString();
 
-        // 使用 try-with-resources 确保 FileWriter 被自动关闭
+        // Use try-with-resources to ensure FileWriter is automatically closed
         try (FileWriter writer = new FileWriter(filePath)) {
             Gson gson = new GsonBuilder().setPrettyPrinting().create();
             gson.toJson(WEATHER_MAP, writer);

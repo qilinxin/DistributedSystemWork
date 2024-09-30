@@ -1,5 +1,8 @@
 package org.adelaide.dto;
 
+/**
+ * Basic Java class for generating data content provided in Assignment 2
+ */
 public class WeatherInfoDTO {
 
     private String id;
@@ -19,6 +22,30 @@ public class WeatherInfoDTO {
     private String wind_dir;
     private int wind_spd_kmh;
     private int wind_spd_kt;
+
+    public WeatherInfoDTO() {}
+
+    public WeatherInfoDTO(String id, String name, String state, String time_zone, double lat, double lon,
+                          String local_date_time, String local_date_time_full, double air_temp, double apparent_t,
+                          String cloud, double dewpt, double press, int rel_hum, String wind_dir, int wind_spd_kmh, int wind_spd_kt) {
+        this.id = id;
+        this.name = name;
+        this.state = state;
+        this.time_zone = time_zone;
+        this.lat = lat;
+        this.lon = lon;
+        this.local_date_time = local_date_time;
+        this.local_date_time_full = local_date_time_full;
+        this.air_temp = air_temp;
+        this.apparent_t = apparent_t;
+        this.cloud = cloud;
+        this.dewpt = dewpt;
+        this.press = press;
+        this.rel_hum = rel_hum;
+        this.wind_dir = wind_dir;
+        this.wind_spd_kmh = wind_spd_kmh;
+        this.wind_spd_kt = wind_spd_kt;
+    }
 
     public String getId() {
         return id;

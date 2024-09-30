@@ -3,29 +3,61 @@ package org.adelaide.util;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class LamportClockUtil {
+    // Singleton instance, eager initialization
+    private static final LamportClockUtil INSTANCE = new LamportClockUtil();
+
     private final AtomicInteger time;
 
-    public LamportClockUtil() {
+    /**
+     * Private constructor to prevent instantiation from other classes.
+     */
+    private LamportClockUtil() {
         this.time = new AtomicInteger(0);
     }
 
-    // 递增本地时间，用于处理本地事件
+    /**
+     * Provides access to the singleton instance.
+     *
+     * @return the singleton instance of LamportClockUtil
+     */
+    public static LamportClockUtil getInstance() {
+        return INSTANCE;
+    }
+
+    /**
+     * Increment the local time, used for handling local events.
+     *
+     * @return the incremented local time
+     */
     public int increment() {
         return time.incrementAndGet();
     }
 
-    // 发送消息时，先递增时间
+    /**
+     * Increment the local time before sending a message.
+     *
+     * @return the incremented local time
+     */
     public int sendEvent() {
         return increment();
     }
 
-    // 接收到消息时，更新时间
+    /**
+     * Update the local time upon receiving a message.
+     * The local time is updated to max(localTime, receivedTime) + 1.
+     *
+     * @param receivedTime the time received from the message
+     */
     public void receiveEvent(int receivedTime) {
-        // 更新本地时间为 max(本地时间, 接收到的时间) + 1
+        // Update the local time to max(localTime, receivedTime) + 1
         time.updateAndGet(localTime -> Math.max(localTime, receivedTime) + 1);
     }
 
-    // 获取当前时间
+    /**
+     * Get the current local time.
+     *
+     * @return the current local time
+     */
     public int getTime() {
         return time.get();
     }

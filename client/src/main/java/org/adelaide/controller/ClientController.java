@@ -17,41 +17,53 @@ public class ClientController {
 
     private final static String AggUrl = "http://localhost:4567/Agg";
 
-    // 使用 LamportClockUtil 来管理 Lamport 时钟
-    private final LamportClockUtil lamportClock = new LamportClockUtil();
+    // Use LamportClockUtil to manage the Lamport clock
+    private final LamportClockUtil lamportClock = LamportClockUtil.getInstance();
 
-    // GET 请求，发送前递增 Lamport 时钟
+    /**
+     * Sends a GET request to the aggregation server to check connectivity.
+     * The Lamport clock is incremented before sending the request.
+     *
+     * @return A response from the aggregation server, including the current Lamport clock value.
+     */
     @GetMapping("/checkClientToAgg")
     @ResponseBody
     public String checkClientToAgg() {
         String url = AggUrl + "/hello";
 
-        // 发送请求前递增本地时钟
+        // Increment the local clock before sending the request
         int currentClock = lamportClock.sendEvent();
         System.out.println("Sending request with Lamport Clock: " + currentClock);
 
-        // 发送请求，返回结果
+        // Send the request and return the result
         String result = restTemplate.getForObject(url + "?clock=" + currentClock, String.class);
         return "client======" + result + " (Lamport Clock: " + currentClock + ")";
     }
 
-    // 查询天气信息，根据 ID 和时钟
+    /**
+     * Queries weather information by ID.
+     * The Lamport clock is incremented before each query.
+     * Upon receiving a response, the local clock is synchronized based on the response's clock value.
+     *
+     * @param id The ID of the weather information to query.
+     * @return The weather information and the status of the query.
+     */
     @GetMapping("/queryWeatherById")
     @ResponseBody
     public CommonResult queryWeatherById(String id) {
-        // 每次查询前递增本地时钟
+        // Increment the local clock before each query
         int currentClock = lamportClock.sendEvent();
         System.out.println("Sending query with Lamport Clock: " + currentClock);
 
         String url = AggUrl + "/queryWeatherById?id=" + id + "&clock=" + currentClock;
 
-        // 获取远程服务的响应
+        // Get the response from the remote service
         CommonResult response = restTemplate.getForObject(url, CommonResult.class);
 
-        // 在接收响应后，同步时钟
+        // Synchronize the clock upon receiving the response
         if (response != null && response.getClock() > currentClock) {
             int receivedClock = response.getClock();
-            lamportClock.receiveEvent(receivedClock);  // 更新本地时钟
+            lamportClock.receiveEvent(receivedClock);  // Update the local clock
             System.out.println("Updated local Lamport Clock to: " + lamportClock.getTime());
         }
 

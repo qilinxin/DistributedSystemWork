@@ -11,63 +11,75 @@ import org.springframework.web.client.RestTemplate;
 import java.util.concurrent.atomic.AtomicInteger;
 
 @Controller
-@RequestMapping("/Content") // 定义类级别的路径
+@RequestMapping("/Content")
 public class ContentController {
 
     private final RestTemplate restTemplate = new RestTemplate();
 
     private final static String AggUrl = "http://localhost:4567/Agg";
 
-    // Lamport Clock 的 AtomicInteger
+    // AtomicInteger to manage the Lamport Clock
     private final static AtomicInteger clock = new AtomicInteger(0);
 
-    // 发送一个简单的 GET 请求，输出当前 Lamport Clock
+    /**
+     * Sends a GET request to check the connection between the client and the aggregation server.
+     * The Lamport clock is incremented before each request is sent.
+     *
+     * @return A response from the aggregation server, including the current Lamport clock value.
+     */
     @GetMapping("/checkClientToAgg")
-    @ResponseBody  // 表示直接返回响应体
+    @ResponseBody
     public String checkClientToAgg() {
         String url = AggUrl + "/hello";
 
-        // 每次请求发送之前递增本地时钟
+        // Increment the local clock before sending the request
         int currentClock = clock.incrementAndGet();
         System.out.println("Sending request with Lamport Clock: " + currentClock);
 
-        // 发出请求并返回结果
+        // Send the request and return the result
         String result = restTemplate.getForObject(url, String.class);
         return "client======" + result + " (Lamport Clock: " + currentClock + ")";
     }
 
-    // 更新天气信息，同时同步 Lamport Clock
+    /**
+     * Updates the weather information on the aggregation server.
+     * The Lamport clock is incremented before sending the update request.
+     * Upon receiving the response, the local Lamport clock is synchronized based on the response clock.
+     *
+     * @param weatherData The weather data to be updated, in JSON format.
+     * @return The result of the update operation, including status and updated clock.
+     */
     @PutMapping("/saveOrUpdateWeatherInfo")
-    @ResponseBody  // 表示直接返回响应体
+    @ResponseBody
     public CommonResult saveOrUpdateWeatherInfo(@RequestBody String weatherData) {
         String url = AggUrl + "/saveOrUpdateWeatherInfo";
 
-        // 设置请求头
+        // Set request headers
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
 
-        // 每次更新时先递增 Lamport Clock
+        // Increment the local clock before sending the update request
         int currentClock = clock.incrementAndGet();
         System.out.println("Sending update request with Lamport Clock: " + currentClock);
 
-        // 请求体 JSON 数据
+        // Print the weather data being sent
         System.out.println("weatherData ===" + weatherData);
 
-        // 创建 HttpEntity 传递请求头和请求体
+        // Create HttpEntity to pass request headers and body
         HttpEntity<String> request = new HttpEntity<>(weatherData, headers);
 
-        // 发送 POST 请求，同时传递 clock 参数
+        // Send the POST request, including the clock parameter
         CommonResult response = restTemplate.postForObject(url + "?clock=" + currentClock, request, CommonResult.class);
 
-        // 在接收响应后，更新本地 Lamport Clock
+        // Update the local Lamport clock upon receiving the response
         if (response != null && response.getClock() > currentClock) {
             int receivedClock = response.getClock();
-            // 更新本地时钟为 max(本地时钟, 接收到的时钟) + 1
+            // Update local clock to max(local clock, received clock) + 1
             clock.updateAndGet(localClock -> Math.max(localClock, receivedClock) + 1);
             System.out.println("Updated local Lamport Clock to: " + clock.get());
         }
 
-        // 输出响应
+        // Print the response
         System.out.println("Response: " + response);
 
         return response;
