@@ -1,6 +1,8 @@
 package org.adelaide.controller;
 
+import jakarta.servlet.http.HttpServletRequest;
 import org.adelaide.dto.CommonResult;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -14,13 +16,15 @@ import java.util.concurrent.atomic.AtomicInteger;
 @RequestMapping("/Content")
 public class ContentController {
 
-    private final RestTemplate restTemplate = new RestTemplate();
-
     private final static String AggUrl = "http://localhost:4567/Agg";
 
     // AtomicInteger to manage the Lamport Clock
     private final static AtomicInteger clock = new AtomicInteger(0);
 
+    private final RestTemplate restTemplate = new RestTemplate();
+
+    @Autowired
+    private HttpServletRequest request;
     /**
      * Sends a GET request to check the connection between the client and the aggregation server.
      * The Lamport clock is incremented before each request is sent.
@@ -57,6 +61,7 @@ public class ContentController {
         // Set request headers
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.set("Client-Port", String.valueOf(request.getLocalPort()));
 
         // Increment the local clock before sending the update request
         int currentClock = clock.incrementAndGet();

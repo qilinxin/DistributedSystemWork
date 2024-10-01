@@ -1,5 +1,6 @@
 package org.adelaide.controller;
 
+import jakarta.servlet.http.HttpServletRequest;
 import org.adelaide.dto.CommonResult;
 import org.adelaide.dto.WeatherInfoWrapperDTO;
 import org.adelaide.service.AggregationService;
@@ -19,6 +20,9 @@ public class AggregationController {
 
     @Autowired
     AggregationService aggregationService;
+
+    @Autowired
+    private HttpServletRequest request;
 
     /**
      * A simple endpoint to test the connectivity with the Aggregation Server.
@@ -130,7 +134,9 @@ public class AggregationController {
     @PostMapping("/saveOrUpdateWeatherInfo")
     @ResponseBody
     public CommonResult saveOrUpdateWeatherInfo(@RequestBody String weatherInfoStr, @RequestParam int clock) {
-        return aggregationService.saveOrUpdateWeatherInfo(weatherInfoStr, clock);
+        String port = request.getHeader("Client-Port");
+        System.out.println("server: " + port);
+        return aggregationService.saveOrUpdateWeatherInfo(weatherInfoStr, port, clock);
     }
 
     /**
@@ -173,7 +179,7 @@ public class AggregationController {
      */
     @GetMapping("/queryCacheInfo")
     @ResponseBody
-    public Map<String, WeatherInfoWrapperDTO> queryCacheInfo() {
+    public Map<String, Map<String, WeatherInfoWrapperDTO>> queryCacheInfo() {
         return aggregationService.queryCacheInfo();
     }
 }
