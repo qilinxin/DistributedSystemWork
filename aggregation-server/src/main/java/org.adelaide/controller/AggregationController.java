@@ -177,9 +177,12 @@ public class AggregationController {
      *   }
      * }
      */
-    @GetMapping("/queryCacheInfo")
+    @PostMapping("/queryCacheInfo")
     @ResponseBody
     public Map<String, Map<String, WeatherInfoWrapperDTO>> queryCacheInfo() {
+        System.out.println(111);
+        System.out.println(222);
+        System.out.println(333);
         return aggregationService.queryCacheInfo();
     }
 }

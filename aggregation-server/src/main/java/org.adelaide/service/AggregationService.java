@@ -16,6 +16,9 @@ import org.springframework.stereotype.Service;
 
 import java.io.*;
 import java.lang.reflect.Type;
+import java.net.URL;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
 import java.util.concurrent.Executors;
@@ -28,12 +31,9 @@ public class AggregationService {
 
     private static final Logger logger = LoggerFactory.getLogger(AggregationService.class);
 
-
     private static final String PROJECT_ROOT_PATH = System.getProperty("user.dir");
     //provide cache for query method. In actual use, the number of query operations should be much greater than the number of update operations.
-    private static final Map<String, WeatherInfoDTO> WEATHER_MAP_FOR_QUERY = new HashMap<>();
 
-    private static final Map<String, Map<String, WeatherInfoWrapperDTO>> WEATHER_MAP_FOR_STORE = new HashMap<>();
     private static final AtomicInteger VERSION_ID = new AtomicInteger(0);
     private final Gson gson = new Gson();
     private static boolean newFileFlag = false;
@@ -46,6 +46,10 @@ public class AggregationService {
 
     // LamportClockUtil instance for handling Lamport Clock
     private final LamportClockUtil lamportClock = LamportClockUtil.getInstance();
+
+    public static final Map<String, WeatherInfoDTO> WEATHER_MAP_FOR_QUERY = new HashMap<>();
+
+    public static final Map<String, Map<String, WeatherInfoWrapperDTO>> WEATHER_MAP_FOR_STORE = new HashMap<>();
 
     /**
      * Starts the periodic task to monitor the WEATHER_MAP information when the system starts.
@@ -86,37 +90,47 @@ public class AggregationService {
     @PostConstruct
     public void loadWeatherData() {
         // Load the file from the resources directory
-        try (InputStream inputStream = getClass().getClassLoader().getResourceAsStream("weatherInfoMap.json")) {
-            if (inputStream != null) {
-                try (InputStreamReader reader = new InputStreamReader(inputStream)) {
-                    Type weatherMapType = new TypeToken<Map<String, WeatherInfoWrapperDTO>>() {}.getType();
-                    WEATHER_MAP_FOR_STORE.putAll(gson.fromJson(reader, weatherMapType));
+        Path path = Paths.get("weatherInfoMap.json");
+        Path absolutePath = path.toAbsolutePath();
 
-                    if (!WEATHER_MAP_FOR_STORE.isEmpty()) {
-                        // Retrieve maximum version number and set it, default to 1 if not present
-                        VERSION_ID.set(WEATHER_MAP_FOR_STORE.values().stream()
-                                .flatMap(innerMap -> innerMap.values().stream())
-                                .mapToInt(WeatherInfoWrapperDTO::getVersionId)
-                                .max()
-                                .orElse(1));
-                        logger.info("Successfully loaded weatherInfoMap, total records: {} ", WEATHER_MAP_FOR_QUERY.size());
-                    } else {
-                        logger.info("Invalid weatherInfoMap.json content, initializing empty WEATHER_MAP.");
-                        newFileFlag = true;
-                    }
+        // 打印绝对路径
+        System.out.println("Absolute path of the file: " + absolutePath);
+        try (InputStream inputStream = Files.newInputStream(path)) {
+            try (InputStreamReader reader = new InputStreamReader(inputStream)) {
+                Type weatherMapType = new TypeToken<Map<String, Map<String, WeatherInfoWrapperDTO>>>() {
+                }.getType();
+
+                // Deserialize JSON into WEATHER_MAP_FOR_STORE
+                Map<String, Map<String, WeatherInfoWrapperDTO>> loadedData = gson.fromJson(reader, weatherMapType);
+
+                if (loadedData != null && !loadedData.isEmpty()) {
+                    // If data is loaded successfully and is not empty, put it into WEATHER_MAP_FOR_STORE
+                    WEATHER_MAP_FOR_STORE.putAll(loadedData);
+
+                    // Retrieve maximum version number and set it, default to 1 if not present
+                    VERSION_ID.set(WEATHER_MAP_FOR_STORE.values().stream()
+                            .flatMap(innerMap -> innerMap.values().stream())
+                            .mapToInt(WeatherInfoWrapperDTO::getVersionId)
+                            .max()
+                            .orElse(1));
+
+                    logger.info("Successfully loaded weatherInfoMap, total records: {} ", WEATHER_MAP_FOR_STORE.size());
+                } else {
+                    // Loaded data is either null or empty
+                    logger.info("Invalid or empty weatherInfoMap.json content, initializing empty WEATHER_MAP.");
+                    newFileFlag = true;
                 }
-            } else {
-                // File not found in resources
-                System.out.println("File not found in resources, creating a new empty WEATHER_MAP.");
-                newFileFlag = true;
             }
         } catch (IOException e) {
             // Catch other IO errors
-            System.out.println("Failed to load weatherInfoMap.json file, it may not exist or failed to read.");
+            logger.error("Failed to load weatherInfoMap.json file, it may not exist or failed to read.", e);
             newFileFlag = true;
         }
+
+        // Log the content of WEATHER_MAP_FOR_STORE after loading attempt
         logger.info(gson.toJson(WEATHER_MAP_FOR_STORE));
     }
+
 
     /**
      * Creates or updates the weather information in the WEATHER_MAP.
@@ -143,11 +157,11 @@ public class AggregationService {
 
         int code = newFileFlag ? 201 : 200;
         newFileFlag = false;
-        if (WEATHER_MAP_FOR_QUERY.size() >= 20 && WEATHER_MAP_FOR_QUERY.containsKey(currentKey)) {
+        if (WEATHER_MAP_FOR_QUERY.size() >= 20 && !WEATHER_MAP_FOR_QUERY.containsKey(currentKey)) {
             deleteOldestData();
         }
 
-        //update cache
+        //update weather in the cache for query
         WEATHER_MAP_FOR_QUERY.put(currentKey, weatherInfo);
         //if current port map not exists ,create and put, otherwise update
         if(WEATHER_MAP_FOR_STORE.get(port) == null) {
@@ -165,7 +179,7 @@ public class AggregationService {
         } catch (IOException e) {
             code = 500;
         }
-        return new CommonResult(code, clock);
+        return new CommonResult(code, currentClock);
     }
 
     /**
@@ -174,6 +188,7 @@ public class AggregationService {
      * @return a map of all weather information currently stored in the cache
      */
     public Map<String, Map<String, WeatherInfoWrapperDTO>> queryCacheInfo() {
+        System.out.println("WEATHER_MAP_FOR_STORE.isEmpty()======"+WEATHER_MAP_FOR_STORE.isEmpty());
         if (WEATHER_MAP_FOR_STORE.isEmpty()) {
             loadWeatherData();
         }
@@ -186,14 +201,20 @@ public class AggregationService {
      *
      * @throws IOException if the file operation fails, such as issues with writing to disk
      */
-    private synchronized void updateFileInfo() throws IOException {
-        String filePath = Paths.get(PROJECT_ROOT_PATH, "weatherInfoMap.json").toString();
+    public synchronized void updateFileInfo() throws IOException {
+        // Get the file from resources directory
+        Path path = Paths.get("weatherInfoMap.json");
+        File file = path.toFile();
 
-        // Use try-with-resources to ensure FileWriter is automatically closed
-        try (FileWriter writer = new FileWriter(filePath)) {
-            Gson gson = new GsonBuilder().setPrettyPrinting().create();
-            gson.toJson(WEATHER_MAP_FOR_STORE, writer);
-            System.out.println("weatherInfoMap.json is updated");
+        // Ensure the file is writable
+        if (file.exists() && file.canWrite()) {
+            try (FileWriter writer = new FileWriter(file)) {
+                Gson gson = new GsonBuilder().setPrettyPrinting().create();
+                gson.toJson(WEATHER_MAP_FOR_STORE, writer);
+                System.out.println("weatherInfoMap.json is updated at: " + file.getAbsolutePath());
+            }
+        } else {
+            System.out.println("Cannot write to the existing weatherInfoMap.json file in resources.");
         }
     }
 
@@ -233,7 +254,7 @@ public class AggregationService {
         return delCnt;
     }
 
-    private void deleteOldestData() {
+    public void deleteOldestData() {
         // Initialize variables to keep track of the oldest entry
         String oldestOuterKey = null;
         String oldestInnerKey = null;
@@ -261,6 +282,7 @@ public class AggregationService {
         if (oldestOuterKey != null && oldestInnerKey != null) {
             Map<String, WeatherInfoWrapperDTO> innerMap = WEATHER_MAP_FOR_STORE.get(oldestOuterKey);
             if (innerMap != null) {
+                WEATHER_MAP_FOR_QUERY.remove(oldestInnerKey);
                 innerMap.remove(oldestInnerKey);
             }
         }
