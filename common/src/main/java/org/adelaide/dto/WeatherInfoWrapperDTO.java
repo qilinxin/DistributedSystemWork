@@ -18,6 +18,8 @@ public class WeatherInfoWrapperDTO {
     // The version ID for tracking updates
     private int versionId;
 
+
+    public WeatherInfoWrapperDTO() {}
     /**
      * Constructs a WeatherInfoWrapperDTO with the provided WeatherInfoDTO object.
      * Initializes the lastUpdateTime field to the current system time and versionId to 0.
@@ -28,6 +30,11 @@ public class WeatherInfoWrapperDTO {
         this.weatherInfo = weatherInfo;
         this.lastUpdateTime = System.currentTimeMillis();
         this.versionId = versionId;
+    }
+
+    public WeatherInfoWrapperDTO(WeatherInfoDTO weatherInfo, long lastUpdateTime) {
+        this.weatherInfo = weatherInfo;
+        this.lastUpdateTime = lastUpdateTime;
     }
 
     /**

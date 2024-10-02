@@ -5,6 +5,8 @@ import org.adelaide.util.LamportClockUtil;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import org.springframework.retry.annotation.Backoff;
+import org.springframework.retry.annotation.Retryable;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.client.RestTemplate;
@@ -50,6 +52,7 @@ public class ClientController {
      */
     @GetMapping("/queryWeatherById")
     @ResponseBody
+    @Retryable(value = { RuntimeException.class }, maxAttempts = 3, backoff = @Backoff(delay = 5000))
     public CommonResult queryWeatherById(String id) {
         // Increment the local clock before each query
         int currentClock = lamportClock.sendEvent();

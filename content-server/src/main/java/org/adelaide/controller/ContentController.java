@@ -6,6 +6,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import org.springframework.retry.annotation.Backoff;
+import org.springframework.retry.annotation.Retryable;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.client.RestTemplate;
@@ -55,6 +57,7 @@ public class ContentController {
      */
     @PutMapping("/saveOrUpdateWeatherInfo")
     @ResponseBody
+    @Retryable(value = { RuntimeException.class }, maxAttempts = 3, backoff = @Backoff(delay = 5000))
     public CommonResult saveOrUpdateWeatherInfo(@RequestBody String weatherData) {
         String url = AggUrl + "/saveOrUpdateWeatherInfo";
 

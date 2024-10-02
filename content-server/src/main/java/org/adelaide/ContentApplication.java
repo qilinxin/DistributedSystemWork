@@ -3,10 +3,12 @@ package org.adelaide;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.ConfigurableApplicationContext;
+import org.springframework.retry.annotation.EnableRetry;
 
 import java.util.HashMap;
 import java.util.Map;
 @SpringBootApplication
+@EnableRetry
 public class ContentApplication {
 
     public static void main(String[] args) {

@@ -10,11 +10,11 @@ public class RandomWeatherInfoUtil {
      *
      * @return WeatherInfoWrapperDTO with mock weather data
      */
-    public WeatherInfoDTO createMockWeatherInfo() {
+    public static WeatherInfoDTO createMockWeatherInfo() {
         Random random = new Random();
 
         // Generate a random ID in the range of IDS60000 - IDS60020, reduce range to create key conflict
-        String id = "IDS" + (60000 + random.nextInt(20));
+        String id = "IDS" + (60000 + random.nextInt(2000));
 
         // Generate a random name for the location
         String name = "Location " + random.nextInt(100);
