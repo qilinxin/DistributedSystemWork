@@ -8,6 +8,7 @@ import jakarta.annotation.PostConstruct;
 import org.adelaide.dto.CommonResult;
 import org.adelaide.dto.WeatherInfoDTO;
 import org.adelaide.dto.WeatherInfoWrapperDTO;
+import org.adelaide.util.JsonUtil;
 import org.adelaide.util.LamportClockUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -16,11 +17,12 @@ import org.springframework.stereotype.Service;
 
 import java.io.*;
 import java.lang.reflect.Type;
-import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.*;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.Map;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -31,7 +33,6 @@ public class AggregationService {
 
     private static final Logger logger = LoggerFactory.getLogger(AggregationService.class);
 
-    private static final String PROJECT_ROOT_PATH = System.getProperty("user.dir");
     //provide cache for query method. In actual use, the number of query operations should be much greater than the number of update operations.
 
     private static final AtomicInteger VERSION_ID = new AtomicInteger(0);
@@ -121,14 +122,15 @@ public class AggregationService {
                     newFileFlag = true;
                 }
             }
+            logger.info(JsonUtil.toJson(WEATHER_MAP_FOR_STORE));
+
         } catch (IOException e) {
             // Catch other IO errors
             logger.error("Failed to load weatherInfoMap.json file, it may not exist or failed to read.", e);
             newFileFlag = true;
+        } catch (IllegalAccessException e) {
+            throw new RuntimeException(e);
         }
-
-        // Log the content of WEATHER_MAP_FOR_STORE after loading attempt
-        logger.info(gson.toJson(WEATHER_MAP_FOR_STORE));
     }
 
 
@@ -148,7 +150,12 @@ public class AggregationService {
         logger.info("Updating weather info with Lamport clock: {}", currentClock);
 
 
-        WeatherInfoDTO weatherInfo = gson.fromJson(weatherInfoStr, WeatherInfoDTO.class);
+        WeatherInfoDTO weatherInfo = null;
+        try {
+            weatherInfo = JsonUtil.fromJson(weatherInfoStr, WeatherInfoDTO.class);
+        } catch (IllegalAccessException | InstantiationException e) {
+            throw new RuntimeException(e);
+        }
         String currentKey = weatherInfo.getId();
 
         if (StringUtils.isEmpty(currentKey)) {

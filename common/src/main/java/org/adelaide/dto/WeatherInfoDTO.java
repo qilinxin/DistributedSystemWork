@@ -182,4 +182,27 @@ public class WeatherInfoDTO {
     public void setWind_spd_kt(int wind_spd_kt) {
         this.wind_spd_kt = wind_spd_kt;
     }
+
+    @Override
+    public String toString() {
+        return "WeatherInfoDTO{" +
+                "id='" + id + '\'' +
+                ", name='" + name + '\'' +
+                ", state='" + state + '\'' +
+                ", time_zone='" + time_zone + '\'' +
+                ", lat=" + lat +
+                ", lon=" + lon +
+                ", local_date_time='" + local_date_time + '\'' +
+                ", local_date_time_full='" + local_date_time_full + '\'' +
+                ", air_temp=" + air_temp +
+                ", apparent_t=" + apparent_t +
+                ", cloud='" + cloud + '\'' +
+                ", dewpt=" + dewpt +
+                ", press=" + press +
+                ", rel_hum=" + rel_hum +
+                ", wind_dir='" + wind_dir + '\'' +
+                ", wind_spd_kmh=" + wind_spd_kmh +
+                ", wind_spd_kt=" + wind_spd_kt +
+                '}';
+    }
 }
