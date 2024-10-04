@@ -1,0 +1,79 @@
+{
+  "54794": {
+    "IDS60901": {
+      "weatherInfo": {
+        "id": "IDS60901",
+        "name": "Adelaide",
+        "lat": 0.0,
+        "lon": 0.0,
+        "air_temp": 23.5,
+        "apparent_t": 0.0,
+        "dewpt": 0.0,
+        "press": 0.0,
+        "rel_hum": 0,
+        "wind_spd_kmh": 0,
+        "wind_spd_kt": 0
+      },
+      "lastUpdateTime": 1728041781114,
+      "versionId": 11
+    }
+  },
+  "8082": {},
+  "54810": {
+    "IDS60901": {
+      "weatherInfo": {
+        "id": "IDS60901",
+        "name": "Adelaide",
+        "lat": 0.0,
+        "lon": 0.0,
+        "air_temp": 23.5,
+        "apparent_t": 0.0,
+        "dewpt": 0.0,
+        "press": 0.0,
+        "rel_hum": 0,
+        "wind_spd_kmh": 0,
+        "wind_spd_kt": 0
+      },
+      "lastUpdateTime": 1728041822476,
+      "versionId": 21
+    }
+  },
+  "54821": {
+    "IDS60901": {
+      "weatherInfo": {
+        "id": "IDS60901",
+        "name": "Adelaide",
+        "lat": 0.0,
+        "lon": 0.0,
+        "air_temp": 23.5,
+        "apparent_t": 0.0,
+        "dewpt": 0.0,
+        "press": 0.0,
+        "rel_hum": 0,
+        "wind_spd_kmh": 0,
+        "wind_spd_kt": 0
+      },
+      "lastUpdateTime": 1728041844525,
+      "versionId": 11
+    }
+  },
+  "54847": {
+    "IDS60901": {
+      "weatherInfo": {
+        "id": "IDS60901",
+        "name": "Adelaide",
+        "lat": 0.0,
+        "lon": 0.0,
+        "air_temp": 23.5,
+        "apparent_t": 0.0,
+        "dewpt": 0.0,
+        "press": 0.0,
+        "rel_hum": 0,
+        "wind_spd_kmh": 0,
+        "wind_spd_kt": 0
+      },
+      "lastUpdateTime": 1728041857363,
+      "versionId": 21
+    }
+  }
+}

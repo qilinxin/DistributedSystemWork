@@ -88,6 +88,11 @@ public class AggregationController {
         return aggregationService.queryWeatherById(clock, id);
     }
 
+    @GetMapping("/loadData")
+    public void loadData() {
+        aggregationService.loadWeatherData();
+    }
+
     /**
      * Creates or updates weather information. The method accepts a JSON string containing weather details
      * and a Lamport clock value to synchronize the logical time.

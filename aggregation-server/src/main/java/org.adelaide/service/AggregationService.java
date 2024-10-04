@@ -23,6 +23,7 @@ import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -48,9 +49,9 @@ public class AggregationService {
     // LamportClockUtil instance for handling Lamport Clock
     private final LamportClockUtil lamportClock = LamportClockUtil.getInstance();
 
-    public static final Map<String, WeatherInfoDTO> WEATHER_MAP_FOR_QUERY = new HashMap<>();
+    public static final Map<String, WeatherInfoDTO> WEATHER_MAP_FOR_QUERY = new ConcurrentHashMap<>();
 
-    public static final Map<String, Map<String, WeatherInfoWrapperDTO>> WEATHER_MAP_FOR_STORE = new HashMap<>();
+    public static final Map<String, Map<String, WeatherInfoWrapperDTO>> WEATHER_MAP_FOR_STORE = new ConcurrentHashMap<>();
 
     /**
      * Starts the periodic task to monitor the WEATHER_MAP information when the system starts.
@@ -70,6 +71,9 @@ public class AggregationService {
      * @return      a {@code CommonResult} containing the queried weather information or an error message if not found
      */
     public CommonResult queryWeatherById(int clock, String id) {
+        if (StringUtils.isEmpty(id)) {
+            return new CommonResult(204, "weather info not found, please check");
+        }
         // Handle received event time
         lamportClock.receiveEvent(clock);
 
@@ -78,7 +82,7 @@ public class AggregationService {
 
         WeatherInfoDTO res = WEATHER_MAP_FOR_QUERY.get(id);
         if (res == null) {
-            return new CommonResult(500, "weather info not found, please check");
+            return new CommonResult(404, "weather info not found, please check");
         }
         return new CommonResult(200, "", res, lamportClock.getTime());
     }
@@ -93,13 +97,11 @@ public class AggregationService {
         // Load the file from the resources directory
         Path path = Paths.get("weatherInfoMap.json");
         Path absolutePath = path.toAbsolutePath();
-
         // 打印绝对路径
         System.out.println("Absolute path of the file: " + absolutePath);
         try (InputStream inputStream = Files.newInputStream(path)) {
             try (InputStreamReader reader = new InputStreamReader(inputStream)) {
-                Type weatherMapType = new TypeToken<Map<String, Map<String, WeatherInfoWrapperDTO>>>() {
-                }.getType();
+                Type weatherMapType = new TypeToken<Map<String, Map<String, WeatherInfoWrapperDTO>>>() {}.getType();
 
                 // Deserialize JSON into WEATHER_MAP_FOR_STORE
                 Map<String, Map<String, WeatherInfoWrapperDTO>> loadedData = gson.fromJson(reader, weatherMapType);
@@ -107,7 +109,17 @@ public class AggregationService {
                 if (loadedData != null && !loadedData.isEmpty()) {
                     // If data is loaded successfully and is not empty, put it into WEATHER_MAP_FOR_STORE
                     WEATHER_MAP_FOR_STORE.putAll(loadedData);
+                    for (Map.Entry<String, Map<String, WeatherInfoWrapperDTO>> outerEntry : WEATHER_MAP_FOR_STORE.entrySet()) {
+                        Map<String, WeatherInfoWrapperDTO> innerMap = outerEntry.getValue();
 
+                        for (Map.Entry<String, WeatherInfoWrapperDTO> innerEntry : innerMap.entrySet()) {
+                            WeatherInfoWrapperDTO wrapper = innerEntry.getValue();
+                            // Convert WeatherInfoWrapperDTO to WeatherInfoDTO
+                            WeatherInfoDTO weatherInfo = wrapper.getWeatherInfo();
+                            // Put the converted WeatherInfoDTO into WEATHER_MAP_FOR_QUERY
+                            WEATHER_MAP_FOR_QUERY.put(weatherInfo.getId(), weatherInfo);
+                        }
+                    }
                     // Retrieve maximum version number and set it, default to 1 if not present
                     VERSION_ID.set(WEATHER_MAP_FOR_STORE.values().stream()
                             .flatMap(innerMap -> innerMap.values().stream())
@@ -143,6 +155,8 @@ public class AggregationService {
      * @return               a {@code CommonResult} indicating whether the operation was successful or failed
      */
     public CommonResult saveOrUpdateWeatherInfo(String weatherInfoStr, String port, int clock) {
+
+
         // Handle received event time
         lamportClock.receiveEvent(clock);
         // Increment Lamport Clock when recording an update event
@@ -151,10 +165,13 @@ public class AggregationService {
 
 
         WeatherInfoDTO weatherInfo = null;
+        if (StringUtils.isBlank(weatherInfoStr) || StringUtils.isBlank(port)) {
+            return new CommonResult(204, "weather data error, please check!");
+        }
         try {
             weatherInfo = JsonUtil.fromJson(weatherInfoStr, WeatherInfoDTO.class);
-        } catch (IllegalAccessException | InstantiationException e) {
-            throw new RuntimeException(e);
+        } catch (IllegalAccessException | InstantiationException | IllegalArgumentException e) {
+            return new CommonResult(500, "Internal server error");
         }
         String currentKey = weatherInfo.getId();
 
@@ -171,7 +188,7 @@ public class AggregationService {
         //update weather in the cache for query
         WEATHER_MAP_FOR_QUERY.put(currentKey, weatherInfo);
         //if current port map not exists ,create and put, otherwise update
-        if(WEATHER_MAP_FOR_STORE.get(port) == null) {
+        if(WEATHER_MAP_FOR_STORE.isEmpty() || WEATHER_MAP_FOR_STORE.get(port) == null) {
             Map<String, WeatherInfoWrapperDTO> resMap = new HashMap<>();
             resMap.put(currentKey, new WeatherInfoWrapperDTO(weatherInfo, currentClock));
             WEATHER_MAP_FOR_STORE.put(port, resMap);
@@ -231,15 +248,15 @@ public class AggregationService {
      */
     private void monitorWeatherMap() {
 //        System.out.println("Monitoring WEATHER_MAP. Current size: " + WEATHER_MAP.size());
-        int delCnt = checkExpiredData();
-        if (delCnt > 0) {
-            try {
-                updateFileInfo();
-            } catch (IOException e) {
-                // No specific handling for monitored update failures, just print error information
-                e.printStackTrace();
-            }
-        }
+//        int delCnt = checkExpiredData();
+//        if (delCnt > 0) {
+//            try {
+//                updateFileInfo();
+//            } catch (IOException e) {
+//                // No specific handling for monitored update failures, just print error information
+//                e.printStackTrace();
+//            }
+//        }
     }
 
 
@@ -262,36 +279,44 @@ public class AggregationService {
     }
 
     public void deleteOldestData() {
-        // Initialize variables to keep track of the oldest entry
-        String oldestOuterKey = null;
-        String oldestInnerKey = null;
-        WeatherInfoWrapperDTO oldestWrapper = null;
+        synchronized (WEATHER_MAP_FOR_STORE) {
+            // Initialize variables to keep track of the oldest entry
+            String oldestOuterKey = null;
+            String oldestInnerKey = null;
+            WeatherInfoWrapperDTO oldestWrapper = null;
 
-        // Iterate over the map to find the oldest entry
-        for (Map.Entry<String, Map<String, WeatherInfoWrapperDTO>> outerEntry : WEATHER_MAP_FOR_STORE.entrySet()) {
-            String outerKey = outerEntry.getKey();
-            Map<String, WeatherInfoWrapperDTO> innerMap = outerEntry.getValue();
+            // Iterate over the map to find the oldest entry
+            for (Map.Entry<String, Map<String, WeatherInfoWrapperDTO>> outerEntry : WEATHER_MAP_FOR_STORE.entrySet()) {
+                String outerKey = outerEntry.getKey();
+                Map<String, WeatherInfoWrapperDTO> innerMap = outerEntry.getValue();
 
-            for (Map.Entry<String, WeatherInfoWrapperDTO> innerEntry : innerMap.entrySet()) {
-                String innerKey = innerEntry.getKey();
-                WeatherInfoWrapperDTO wrapper = innerEntry.getValue();
+                for (Map.Entry<String, WeatherInfoWrapperDTO> innerEntry : innerMap.entrySet()) {
+                    String innerKey = innerEntry.getKey();
+                    WeatherInfoWrapperDTO wrapper = innerEntry.getValue();
 
-                // Update the oldestWrapper if this wrapper has an older timestamp
-                if (oldestWrapper == null || wrapper.getLastUpdateTime() < oldestWrapper.getLastUpdateTime()) {
-                    oldestOuterKey = outerKey;
-                    oldestInnerKey = innerKey;
-                    oldestWrapper = wrapper;
+                    // Update the oldestWrapper if this wrapper has an older timestamp
+                    if (oldestWrapper == null || wrapper.getLastUpdateTime() < oldestWrapper.getLastUpdateTime()) {
+                        System.out.println("print info oldestOuterKey = " + outerKey + ", oldestInnerKey =  " + innerKey + ", oldestWrapper = " + wrapper);
+                        oldestOuterKey = outerKey;
+                        oldestInnerKey = innerKey;
+                        oldestWrapper = wrapper;
+                    }
+                }
+            }
+
+            // If we found the oldest entry, remove it from the map
+            if (oldestOuterKey != null && oldestInnerKey != null) {
+                Map<String, WeatherInfoWrapperDTO> innerMap = WEATHER_MAP_FOR_STORE.get(oldestOuterKey);
+                if (innerMap != null) {
+                    WEATHER_MAP_FOR_QUERY.remove(oldestInnerKey);
+                    innerMap.remove(oldestInnerKey);
+                    // If the inner map becomes empty, remove the outer key
+                    if (innerMap.isEmpty()) {
+                        WEATHER_MAP_FOR_STORE.remove(oldestOuterKey);
+                    }
                 }
             }
         }
-
-        // If we found the oldest entry, remove it from the map
-        if (oldestOuterKey != null && oldestInnerKey != null) {
-            Map<String, WeatherInfoWrapperDTO> innerMap = WEATHER_MAP_FOR_STORE.get(oldestOuterKey);
-            if (innerMap != null) {
-                WEATHER_MAP_FOR_QUERY.remove(oldestInnerKey);
-                innerMap.remove(oldestInnerKey);
-            }
-        }
     }
+
 }
