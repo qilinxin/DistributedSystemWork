@@ -1,12 +1,15 @@
 import org.adelaide.ClientApplication;
 import org.adelaide.dto.CommonResult;
+import org.adelaide.util.JsonUtil;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.boot.test.web.server.LocalServerPort;
+import org.springframework.context.MessageSource;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
@@ -25,10 +28,6 @@ public class ClientTest {
 
     @BeforeEach
     public void setUp() {
-        // Arrange: URL to load the data before each test
-        String loadDataUrl = "http://localhost:" + port + "/Agg/loadData";
-
-        restTemplate.getForEntity(loadDataUrl, Void.class);
 
     }
 
@@ -38,7 +37,7 @@ public class ClientTest {
     @Test
     public void testHello() {
         // Arrange
-        String mockUrl = "http://localhost:" + port + "/Agg/hello";
+        String mockUrl = "http://localhost:" + port + "/Client/checkClientToAgg";
 
         // Act
         ResponseEntity<String> response = restTemplate.getForEntity(mockUrl, String.class);
@@ -46,7 +45,7 @@ public class ClientTest {
         // Assert
         assertNotNull(response);
         assertEquals(HttpStatus.OK, response.getStatusCode());
-        assertEquals("Hello from Aggregation Server!", response.getBody());
+        assertEquals("client======Hello from Aggregation Server! (Lamport Clock: 1)", response.getBody());
     }
 
     /**
@@ -56,7 +55,7 @@ public class ClientTest {
     public void testQueryWeatherById() {
         // Arrange
         String mockId = "Capacity19";
-        String mockUrl = "http://localhost:" + port + "/Agg/queryWeatherById?id=" + mockId + "&clock=1";
+        String mockUrl = "http://localhost:" + port + "/Client/queryWeatherById?id=" + mockId;
 
         // Act
         ResponseEntity<CommonResult> response = restTemplate.getForEntity(mockUrl, CommonResult.class);
@@ -74,7 +73,7 @@ public class ClientTest {
     public void testQueryWeatherByIdSuccessfulResponse() {
         // Arrange
         String mockId = "Capacity19";
-        String mockUrl = "http://localhost:" + port + "/Agg/queryWeatherById?id=" + mockId + "&clock=1";
+        String mockUrl = "http://localhost:" + port + "/Client/queryWeatherById?id=" + mockId ;
 
         // Act
         ResponseEntity<CommonResult> response = restTemplate.getForEntity(mockUrl, CommonResult.class);
@@ -91,10 +90,10 @@ public class ClientTest {
      * Test the Lamport clock behavior when a successful response is received.
      */
     @Test
-    public void testQueryWeatherByIdLamportClockUpdate() {
+    public void testQueryWeatherByIdLamportClockUpdate() throws IllegalAccessException {
         // Arrange
         String mockId = "Capacity19";
-        String mockUrl = "http://localhost:" + port + "/Agg/queryWeatherById?id=" + mockId + "&clock=1";
+        String mockUrl = "http://localhost:" + port + "/Client/queryWeatherById?id=" + mockId ;
 
         // Act
         ResponseEntity<CommonResult> response = restTemplate.getForEntity(mockUrl, CommonResult.class);
@@ -103,6 +102,7 @@ public class ClientTest {
         assertNotNull(response);
         assertEquals(HttpStatus.OK, response.getStatusCode());
         CommonResult result = response.getBody();
+        System.out.println(JsonUtil.toJson(result));
         assertNotNull(result);
         assertTrue(result.getClock() > 1, "Lamport clock should be updated based on received clock");
     }
@@ -115,7 +115,7 @@ public class ClientTest {
     public void testQueryWeatherByIdNullResponse() {
         // Arrange
         String mockId = "";
-        String mockUrl = "http://localhost:" + port + "/Agg/queryWeatherById?id=" + mockId + "&clock=1";
+        String mockUrl = "http://localhost:" + port + "/Client/queryWeatherById?id=" + mockId;
 
         // Act
         ResponseEntity<CommonResult> response = restTemplate.getForEntity(mockUrl, CommonResult.class);

@@ -40,9 +40,6 @@ public class AggregationService {
     private final Gson gson = new Gson();
     private static boolean newFileFlag = false;
 
-    @Value("update_flag")
-    private static boolean Update_Flag;
-
     // Create ScheduledExecutorService for periodic tasks
     private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
 
@@ -94,11 +91,30 @@ public class AggregationService {
      */
     @PostConstruct
     public void loadWeatherData() {
-        // Load the file from the resources directory
-        Path path = Paths.get("weatherInfoMap.json");
-        Path absolutePath = path.toAbsolutePath();
-        // 打印绝对路径
-        System.out.println("Absolute path of the file: " + absolutePath);
+        Path path = getAbsolutePath();
+
+        // print path
+        System.out.println("new Absolute path of the file: " + path.toString().replace("/aggregation-server", "").replace("/client","").replace("/content",""));
+        System.out.println("new Absolute path of the file: " + path.toString().replace("/aggregation-server", "").replace("/client","").replace("/content",""));
+        System.out.println("new Absolute path of the file: " + path.toString().replace("/aggregation-server", "").replace("/client","").replace("/content",""));
+        System.out.println("new Absolute path of the file: " + path.toString().replace("/aggregation-server", "").replace("/client","").replace("/content",""));
+        System.out.println("new Absolute path of the file: " + path.toString().replace("/aggregation-server", "").replace("/client","").replace("/content",""));
+        System.out.println("new Absolute path of the file: " + path.toString().replace("/aggregation-server", "").replace("/client","").replace("/content",""));
+        System.out.println("new Absolute path of the file: " + path.toString().replace("/aggregation-server", "").replace("/client","").replace("/content",""));
+        System.out.println("new Absolute path of the file: " + path.toString().replace("/aggregation-server", "").replace("/client","").replace("/content",""));
+        System.out.println("new Absolute path of the file: " + path.toString().replace("/aggregation-server", "").replace("/client","").replace("/content",""));
+        System.out.println("new Absolute path of the file: " + path.toString().replace("/aggregation-server", "").replace("/client","").replace("/content",""));
+        System.out.println("new Absolute path of the file: " + path.toString().replace("/aggregation-server", "").replace("/client","").replace("/content",""));
+        System.out.println("new Absolute path of the file: " + path.toString().replace("/aggregation-server", "").replace("/client","").replace("/content",""));
+        System.out.println("new Absolute path of the file: " + path.toString().replace("/aggregation-server", "").replace("/client","").replace("/content",""));
+        System.out.println("new Absolute path of the file: " + path.toString().replace("/aggregation-server", "").replace("/client","").replace("/content",""));
+        System.out.println("new Absolute path of the file: " + path.toString().replace("/aggregation-server", "").replace("/client","").replace("/content",""));
+        System.out.println("new Absolute path of the file: " + path.toString().replace("/aggregation-server", "").replace("/client","").replace("/content",""));
+        System.out.println("new Absolute path of the file: " + path.toString().replace("/aggregation-server", "").replace("/client","").replace("/content",""));
+        System.out.println("new Absolute path of the file: " + path.toString().replace("/aggregation-server", "").replace("/client","").replace("/content",""));
+        System.out.println("new Absolute path of the file: " + path.toString().replace("/aggregation-server", "").replace("/client","").replace("/content",""));
+        logger.error("new Absolute path of the file: " + path.toString().replace("/aggregation-server", "").replace("/client","").replace("/content",""));
+        logger.info("new Absolute path of the file: " + path.toString().replace("/aggregation-server", "").replace("/client", "").replace("/content", ""));
         try (InputStream inputStream = Files.newInputStream(path)) {
             try (InputStreamReader reader = new InputStreamReader(inputStream)) {
                 Type weatherMapType = new TypeToken<Map<String, Map<String, WeatherInfoWrapperDTO>>>() {}.getType();
@@ -143,6 +159,22 @@ public class AggregationService {
         } catch (IllegalAccessException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    /**
+     * transfer path to the same path
+     * @return fixed path
+     */
+    public Path getAbsolutePath() {
+        // Load the file from the resources directory
+        Path path = Paths.get("weatherInfoMap.json");
+        String currentPath = path.toAbsolutePath().toString();
+        logger.info("currentPath ====== {}",currentPath);
+        String newPath = currentPath.replace("/aggregation-server", "").replace("/client","").replace("/content","");
+        logger.info("newPath ====== {}",newPath);
+
+        // 将修改后的字符串转换回 Path 对象
+        return Paths.get(newPath);
     }
 
 
@@ -227,7 +259,7 @@ public class AggregationService {
      */
     public synchronized void updateFileInfo() throws IOException {
         // Get the file from resources directory
-        Path path = Paths.get("weatherInfoMap.json");
+        Path path = getAbsolutePath();
         File file = path.toFile();
 
         // Ensure the file is writable
@@ -247,16 +279,16 @@ public class AggregationService {
      * If any entries are removed, the updated information is saved back to the file.
      */
     private void monitorWeatherMap() {
-//        System.out.println("Monitoring WEATHER_MAP. Current size: " + WEATHER_MAP.size());
-//        int delCnt = checkExpiredData();
-//        if (delCnt > 0) {
-//            try {
-//                updateFileInfo();
-//            } catch (IOException e) {
-//                // No specific handling for monitored update failures, just print error information
-//                e.printStackTrace();
-//            }
-//        }
+        System.out.println("Monitoring WEATHER_MAP. Current size: " + WEATHER_MAP_FOR_QUERY.size());
+        int delCnt = checkExpiredData();
+        if (delCnt > 0) {
+            try {
+                updateFileInfo();
+            } catch (IOException e) {
+                // No specific handling for monitored update failures, just print error information
+                e.printStackTrace();
+            }
+        }
     }
 
 

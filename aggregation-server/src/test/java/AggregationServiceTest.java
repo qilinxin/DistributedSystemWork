@@ -4,22 +4,21 @@ import org.adelaide.dto.CommonResult;
 import org.adelaide.dto.WeatherInfoDTO;
 import org.adelaide.dto.WeatherInfoWrapperDTO;
 import org.adelaide.service.AggregationService;
-import org.adelaide.util.JsonUtil;
 import org.adelaide.util.LamportClockUtil;
 import org.adelaide.util.RandomWeatherInfoUtil;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.MockitoAnnotations;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.SpringBootTest;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.*;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -27,6 +26,7 @@ import static org.junit.jupiter.api.Assertions.*;
  * Test class for AggregationService.
  * This class contains unit tests for various functionalities of the AggregationService.
  */
+@TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 @ExtendWith(MockitoExtension.class)
 @SpringBootTest(classes= AggregationApplication.class)
 public class AggregationServiceTest {
@@ -35,9 +35,6 @@ public class AggregationServiceTest {
     private AggregationService aggregationService;
 
     private Gson gson = new Gson();
-
-    @Value("${update_flag}")
-    private boolean updateFlag;
 
     @BeforeEach
     public void setUp() {
@@ -52,6 +49,7 @@ public class AggregationServiceTest {
      * This test ensures that when the cache reaches its capacity, the oldest entries are removed.
      */
     @Test
+    @Order(1)
     public void testCapacity() throws IllegalAccessException {
         int capacity = 25;
 
@@ -529,7 +527,5 @@ public class AggregationServiceTest {
         // Assert
         assertTrue(AggregationService.WEATHER_MAP_FOR_QUERY.size() > 0, "Cache should contain data after concurrent operations");
     }
-
-    // Existing test methods...
 
 }
