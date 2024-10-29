@@ -1,2 +1,4 @@
-package org.adelaide.council.paxos;public class Learner {
+package org.adelaide.council.paxos;
+
+public class Learner {
 }

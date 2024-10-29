@@ -1,2 +1,4 @@
-package org.adelaide.council.paxos;public class Application {
+package org.adelaide.council;
+
+public class Application {
 }

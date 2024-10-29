@@ -1,2 +1,4 @@
-package org.adelaide.council.paxos;public class Proposer {
+package org.adelaide.council.paxos;
+
+public class Proposer {
 }

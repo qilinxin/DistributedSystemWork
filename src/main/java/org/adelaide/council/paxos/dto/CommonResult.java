@@ -1,2 +1,4 @@
-package org.adelaide.council.paxos.DTO;public class CommonResult {
+package org.adelaide.council.paxos.dto;
+
+public class CommonResult {
 }
