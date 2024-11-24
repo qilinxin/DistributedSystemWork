@@ -9,6 +9,6 @@ public class Main {
     public static void main(String[] args) {
         PaxosCoordinator pc = new PaxosCoordinator();
 //        pc.buildElectionData();
-        pc.runElection();
+        pc.runElection(2);
     }
 }

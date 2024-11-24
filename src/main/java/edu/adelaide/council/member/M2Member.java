@@ -1,132 +1,185 @@
 package edu.adelaide.council.member;
 
+import com.google.gson.Gson;
+import edu.adelaide.council.paxos.PaxosCoordinator;
+import edu.adelaide.council.dto.MessageDTO;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.util.ArrayList;
+import java.net.SocketTimeoutException;
 import java.util.List;
-import java.util.concurrent.ThreadLocalRandom;
+import java.util.Random;
 import java.util.concurrent.atomic.AtomicInteger;
 
-public class M2Member extends Member{
-    // 提案编号生成器
-    private AtomicInteger proposalNumberGenerator = new AtomicInteger(0);
-    private String proposerId;
-    private List<String> acceptorAddresses;
-    // 保存当前承诺的最高提案编号
-    private AtomicInteger promisedProposalNumber = new AtomicInteger(-1);
-    // 保存已接受的提案编号及其值
+public class M2Member extends Member {
+
+    private final Gson gson = new Gson();
+    private final AtomicInteger promisedProposalNumber = new AtomicInteger(-1);
     private int acceptedProposalNumber = -1;
     private String acceptedValue = null;
-    // 保存最终被接受的提案编号及其值
-    private AtomicInteger finalProposalNumber = new AtomicInteger(-1);
-    private String finalProposalValue = null;
-    // 模拟M2网络连接的状态
-    private boolean atCafe;
+    private final boolean atCafe;
 
     public M2Member(int acceptorPort, List<String> acceptorAddresses) {
         this.acceptorPort = acceptorPort;
         this.acceptorAddresses = acceptorAddresses;
+        this.atCafe = new Random().nextBoolean();
     }
 
     // Proposer角色：发起提案
-    public void propose(String proposalValue) {
+    public void propose() {
         if (!atCafe) {
-            System.out.println("M2 is not at the cafe, skipping proposal due to poor internet.");
+            System.out.println("M2 has a poor internet connection and may not respond promptly.");
+            //需要重新处罚选举流程，设置缓存为指定值
+            PaxosCoordinator.setStatusCache(99);
             return;
         }
 
-        int proposalNumber = proposalNumberGenerator.incrementAndGet();
-        int promisesReceived = 0;
-
-        // 发送PREPARE请求给所有的接受者
+        int proposalId = PaxosCoordinator.getNextProposalId();
+        int agreeCount = 0;
+        String proposed_value = "Suggest M2 to become chairman";
+        // 发送PREPARE请求给所有的接受者，增加超时重试机制
         for (String address : acceptorAddresses) {
-            try {
-                String[] parts = address.split(":");
-                String host = parts[0];
-                int port = Integer.parseInt(parts[1]);
+            boolean success = false;
+            int retryCount = 0;
+            int maxRetries = 3;
 
-                Socket socket = new Socket(host, port);
-                PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
-                BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-
-                out.println("PREPARE," + proposalNumber + "," + proposerId);
-                String response = in.readLine();
-                String[] responseParts = response.split(",");
-                String responseType = responseParts[0];
-
-                if ("PROMISE".equals(responseType)) {
-                    promisesReceived++;
-                }
-
-                socket.close();
-            } catch (Exception e) {
-                System.err.println("Failed to send PREPARE to: " + address);
-            }
-        }
-
-        // 如果收到多数承诺，发送ACCEPT请求
-        if (promisesReceived > acceptorAddresses.size() / 2) {
-            for (String address : acceptorAddresses) {
+            while (!success && retryCount < maxRetries) {
                 try {
                     String[] parts = address.split(":");
                     String host = parts[0];
                     int port = Integer.parseInt(parts[1]);
 
-                    Socket socket = new Socket(host, port);
-                    PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
+                    try (Socket socket = new Socket(host, port)) {
+                        PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
+                        BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
 
-                    out.println("ACCEPT," + proposalNumber + "," + proposalValue);
+                        // 构建MessageDTO对象并转换为JSON字符串
+                        MessageDTO message = new MessageDTO();
+                        message.setType("PREPARE");
+                        message.setProposalId(proposalId);
+                        message.setInfo(proposed_value);
+                        String jsonMessage = gson.toJson(message);
+                        System.out.println("propose jsonMessage: " + jsonMessage);
+                        out.println(jsonMessage);
+                        String jsonResponse = in.readLine();
+                        MessageDTO response = gson.fromJson(jsonResponse, MessageDTO.class);
 
-                    socket.close();
+                        if ("AGREE".equals(response.getType())) {
+                            agreeCount++;
+                        }
+                        success = true;
+                    }
+                } catch (SocketTimeoutException e) {
+                    retryCount++;
+                    System.err.println("Timeout while sending PREPARE to: " + address + ", retrying... (" + retryCount + "/" + maxRetries + ")");
                 } catch (Exception e) {
-                    System.err.println("Failed to send ACCEPT to: " + address);
+                    System.err.println("Failed to send PREPARE to: " + address);
+                    break; // 非超时的异常，跳出重试循环
                 }
+            }
+        }
+
+        // 如果收到多数承诺，发送ACCEPT请求
+        if (agreeCount > acceptorAddresses.size() / 2) {
+            System.out.println("M2-------Member proposal promise received: " + agreeCount);
+            int acceptCount = 0;
+            for (String address : acceptorAddresses) {
+                boolean success = false;
+                int retryCount = 0;
+                int maxRetries = 3;
+
+                while (!success && retryCount < maxRetries) {
+                    try {
+                        String[] parts = address.split(":");
+                        String host = parts[0];
+                        int port = Integer.parseInt(parts[1]);
+
+                        try (Socket socket = new Socket(host, port)) {
+                            socket.setSoTimeout(10000); // 设置超时时间为2000毫秒
+                            PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
+                            BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+
+                            // 构建MessageDTO对象并转换为JSON字符串
+                            MessageDTO message = new MessageDTO();
+                            message.setType("ACCEPT");
+                            message.setProposalId(proposalId);
+                            message.setInfo(proposed_value);
+                            String jsonMessage = gson.toJson(message);
+                            System.out.println("ACCEPT jsonMessage: " + jsonMessage);
+                            out.println(jsonMessage);
+
+                            String jsonResponse = in.readLine();
+                            MessageDTO response = gson.fromJson(jsonResponse, MessageDTO.class);
+
+                            if ("ACCEPTED".equals(response.getType())) {
+                                acceptCount++;
+                            }
+                            success = true;
+                        }
+                    } catch (SocketTimeoutException e) {
+                        retryCount++;
+                        System.err.println("Timeout while sending ACCEPT to: " + address + ", retrying... (" + retryCount + "/" + maxRetries + ")");
+                    } catch (Exception e) {
+                        System.err.println("Failed to send ACCEPT to: " + address);
+                        e.printStackTrace();
+                        break; // 非超时的异常，跳出重试循环
+                    }
+                }
+            }
+
+            // 如果超过半数节点接受了提案,更新缓存信息，结束选举
+            if (acceptCount > acceptorAddresses.size() / 2) {
+                System.out.println("Proposal accepted by majority, ending program...");
+                PaxosCoordinator.setStatusCache(2);
+            } else {
+                //需要重新处罚选举流程，设置缓存为指定值
+                PaxosCoordinator.setStatusCache(99);
             }
         } else {
             System.out.println("Proposal failed to gather majority promises.");
+            //需要重新处罚选举流程，设置缓存为指定值
+            PaxosCoordinator.setStatusCache(99);
         }
+
     }
 
     // Acceptor角色：处理请求
     public void startAcceptor(int port) {
+        if (!atCafe) {
+            System.out.println("M2 has a poor internet connection and may not respond promptly.");
+            return;
+        }
+        System.out.println("M2Member starting acceptor on port " + port);
         new Thread(() -> {
             try (ServerSocket serverSocket = new ServerSocket(port)) {
-                System.out.println("M2 Acceptor started on port: " + port);
-
                 while (true) {
                     Socket proposerSocket = serverSocket.accept();
-                    BufferedReader in = new BufferedReader(new InputStreamReader(proposerSocket.getInputStream()));
-                    PrintWriter out = new PrintWriter(proposerSocket.getOutputStream(), true);
+                    try (BufferedReader in = new BufferedReader(new InputStreamReader(proposerSocket.getInputStream()));
+                         PrintWriter out = new PrintWriter(proposerSocket.getOutputStream(), true)) {
 
-                    // 模拟延迟回复
-                    if (!atCafe && ThreadLocalRandom.current().nextInt(10) < 7) {
-                        System.out.println("M2 is experiencing poor connectivity, skipping this message.");
-                        proposerSocket.close();
-                        continue;
+                        String jsonMessage = in.readLine();
+                        MessageDTO message = gson.fromJson(jsonMessage, MessageDTO.class);
+                        String messageType = message.getType();
+                        int proposalNumber = message.getProposalId();
+                        String proposalValue = message.getInfo();
+                        switch (messageType) {
+                            case "PREPARE":
+                                System.out.println("M2Member receive proposal:" + proposalValue);
+                                handlePrepare(proposalNumber, proposalValue, out);
+                                break;
+                            case "ACCEPT":
+                                System.out.println("M2Member receive result:" + proposalValue);
+                                handleAccept(proposalNumber, proposalValue, out);
+                                break;
+                            default:
+                                System.err.println("Unknown message type: " + messageType);
+                        }
+                    } catch (Exception e) {
+                        e.printStackTrace();
                     }
-
-                    // 读取来自提议者的请求
-                    String[] message = in.readLine().split(",");
-                    String messageType = message[0];
-                    int proposalNumber = Integer.parseInt(message[1]);
-                    String proposalValue = message.length > 2 ? message[2] : null;
-
-                    switch (messageType) {
-                        case "PREPARE":
-                            handlePrepare(proposalNumber, out);
-                            break;
-                        case "ACCEPT":
-                            handleAccept(proposalNumber, proposalValue, out);
-                            break;
-                        default:
-                            System.err.println("Unknown message type: " + messageType);
-                    }
-
-                    proposerSocket.close();
                 }
             } catch (Exception e) {
                 e.printStackTrace();
@@ -134,28 +187,39 @@ public class M2Member extends Member{
         }).start();
     }
 
-    private void handlePrepare(int proposalNumber, PrintWriter out) {
-        // 如果提案编号大于当前承诺的提案编号，则承诺该提案编号
-        if (proposalNumber > promisedProposalNumber.get()) {
+    private void handlePrepare(int proposalNumber, String proposalValue, PrintWriter out) {
+        MessageDTO response = new MessageDTO();
+        response.setProposalId(proposalNumber);
+
+        if (proposalNumber > promisedProposalNumber.get() && proposalValue.contains("M2")) {
             promisedProposalNumber.set(proposalNumber);
-            out.println("PROMISE," + proposalNumber + "," + acceptedProposalNumber + "," + acceptedValue);
+            response.setType("AGREE");
+            response.setInfo(acceptedValue);
+            System.out.println("M2 agree proposal: " + proposalValue);
         } else {
-            // 拒绝承诺较低的提案编号
-            out.println("REJECT," + proposalNumber);
+            response.setType("REJECT");
+            System.out.println("M2 reject proposal: " + proposalValue);
         }
+
+        String jsonResponse = gson.toJson(response);
+        out.println(jsonResponse);
     }
 
     private void handleAccept(int proposalNumber, String proposalValue, PrintWriter out) {
-        // 如果提案编号大于或等于当前承诺的提案编号，则接受该提案
+        MessageDTO response = new MessageDTO();
+        response.setProposalId(proposalNumber);
+
         if (proposalNumber >= promisedProposalNumber.get()) {
             promisedProposalNumber.set(proposalNumber);
             acceptedProposalNumber = proposalNumber;
             acceptedValue = proposalValue;
-            out.println("ACCEPTED," + proposalNumber + "," + proposalValue);
+            response.setType("ACCEPTED");
+            response.setInfo(proposalValue);
         } else {
-            // 拒绝接受较低的提案编号
-            out.println("REJECT," + proposalNumber);
+            response.setType("REJECT");
         }
-    }
 
+        String jsonResponse = gson.toJson(response);
+        out.println(jsonResponse);
+    }
 }

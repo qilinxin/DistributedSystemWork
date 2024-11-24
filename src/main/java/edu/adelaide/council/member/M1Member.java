@@ -15,14 +15,11 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class M1Member extends Member {
 
-    private int memberId = 1;
-    private String proposerId;
+    private final Gson gson = new Gson();
+
     private final AtomicInteger promisedProposalNumber = new AtomicInteger(-1);
     private int acceptedProposalNumber = -1;
     private String acceptedValue = null;
-    private final AtomicInteger finalProposalNumber = new AtomicInteger(-1);
-    private String finalProposalValue = null;
-    private final Gson gson = new Gson();
 
     public M1Member(int acceptorPort, List<String> acceptorAddresses) {
         this.acceptorPort = acceptorPort;
@@ -32,7 +29,7 @@ public class M1Member extends Member {
     // Proposer角色：发起提案
     public void propose() {
         int proposalId = PaxosCoordinator.getNextProposalId();
-        int promisesReceived = 0;
+        int agreeCount = 0;
         String proposed_value = "Suggest M1 to become chairman";
         // 发送PREPARE请求给所有的接受者，增加超时重试机制
         for (String address : acceptorAddresses) {
@@ -62,7 +59,7 @@ public class M1Member extends Member {
                         MessageDTO response = gson.fromJson(jsonResponse, MessageDTO.class);
 
                         if ("AGREE".equals(response.getType())) {
-                            promisesReceived++;
+                            agreeCount++;
                         }
                         success = true;
                     }
@@ -71,14 +68,15 @@ public class M1Member extends Member {
                     System.err.println("Timeout while sending PREPARE to: " + address + ", retrying... (" + retryCount + "/" + maxRetries + ")");
                 } catch (Exception e) {
                     System.err.println("Failed to send PREPARE to: " + address);
+                    e.printStackTrace();
                     break; // 非超时的异常，跳出重试循环
                 }
             }
         }
 
         // 如果收到多数承诺，发送ACCEPT请求
-        if (promisesReceived > acceptorAddresses.size() / 2) {
-            System.out.println("M1Member proposal promise received: " + promisesReceived);
+        if (agreeCount > acceptorAddresses.size() / 2) {
+            System.out.println("M1-------Member proposal promise received: " + agreeCount);
             int acceptCount = 0;
             for (String address : acceptorAddresses) {
                 boolean success = false;
@@ -92,7 +90,7 @@ public class M1Member extends Member {
                         int port = Integer.parseInt(parts[1]);
 
                         try (Socket socket = new Socket(host, port)) {
-                            socket.setSoTimeout(10000); // 设置超时时间为2000毫秒
+                            socket.setSoTimeout(5000); // 设置超时时间为2000毫秒
                             PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
                             BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
 
@@ -118,6 +116,7 @@ public class M1Member extends Member {
                         System.err.println("Timeout while sending ACCEPT to: " + address + ", retrying... (" + retryCount + "/" + maxRetries + ")");
                     } catch (Exception e) {
                         System.err.println("Failed to send ACCEPT to: " + address);
+                        e.printStackTrace();
                         break; // 非超时的异常，跳出重试循环
                     }
                 }
@@ -133,7 +132,10 @@ public class M1Member extends Member {
             }
         } else {
             System.out.println("Proposal failed to gather majority promises.");
+            //需要重新处罚选举流程，设置缓存为指定值
+            PaxosCoordinator.setStatusCache(99);
         }
+
     }
 
 
