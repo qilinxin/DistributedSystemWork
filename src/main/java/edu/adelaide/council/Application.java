@@ -1,4 +1,4 @@
-package org.adelaide.council;
+package edu.adelaide.council;
 
 public class Application {
 }

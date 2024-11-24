@@ -7,18 +7,9 @@
 
     <!-- 父项目的 groupId、artifactId 和 version -->
     <groupId>org.adelaide</groupId>
-    <artifactId>Assignment2</artifactId>
+    <artifactId>Assignment3</artifactId>
     <version>1.0-SNAPSHOT</version>
     <packaging>pom</packaging> <!-- 父项目的打包类型为 pom -->
-
-    <!-- 子模块列表 -->
-    <modules>
-        <module>aggregation-server</module>
-        <module>content-server</module>
-        <module>client</module>
-        <module>common</module>
-
-    </modules>
 
     <!-- 父项目的全局属性 -->
     <properties>
@@ -26,28 +17,30 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>
 
-    <!-- 父项目的依赖管理 -->
-    <dependencyManagement>
-        <dependencies>
-            <!-- 在这里可以统一管理依赖的版本 -->
-            <!-- 例如 Spring Boot 的依赖 -->
-            <dependency>
-                <groupId>org.springframework.boot</groupId>
-                <artifactId>spring-boot-dependencies</artifactId>
-                <version>3.1.0</version> <!-- 选择合适的 Spring Boot 版本 -->
-                <type>pom</type>
-                <scope>import</scope>
-            </dependency>
+    <!-- 依赖管理 -->
+    <dependencies>
+        <!-- 在这里可以统一管理依赖的版本 -->
+        <!-- 例如 Spring Boot 的依赖 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-dependencies</artifactId>
+            <version>3.1.0</version> <!-- 选择合适的 Spring Boot 版本 -->
+            <type>pom</type>
+            <scope>import</scope>
+        </dependency>
 
-            <!-- 管理 common 模块的版本 -->
-            <dependency>
-                <groupId>org.adelaide</groupId>
-                <artifactId>common</artifactId>
-                <version>1.0-SNAPSHOT</version>
-            </dependency>
+        <dependency>
+            <groupId>com.google.code.gson</groupId>
+            <artifactId>gson</artifactId>
+            <version>2.10.1</version>
+        </dependency>
+        <dependency>
+            <groupId>org.adelaide</groupId>
+            <artifactId>Assignment3</artifactId>
+            <version>1.0-SNAPSHOT</version>
+        </dependency>
 
-        </dependencies>
-    </dependencyManagement>
+    </dependencies>
 
     <!-- 父项目的插件管理 -->
     <build>
@@ -61,6 +54,21 @@
                 </plugin>
             </plugins>
         </pluginManagement>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                    <basedir/>
+                    <buildDirectory/>
+                    <mainOutputDirectory/>
+                    <outputDirectory/>
+                    <projectArtifact/>
+                    <source>8</source>
+                    <target>8</target>
+                </configuration>
+            </plugin>
+        </plugins>
 
         <!-- 可选：设置子模块的通用输出路径 -->
         <directory>${project.basedir}/target</directory>
