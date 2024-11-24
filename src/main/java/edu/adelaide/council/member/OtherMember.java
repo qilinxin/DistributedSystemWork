@@ -22,7 +22,8 @@ public class OtherMember extends Member{
     private AtomicInteger finalProposalNumber = new AtomicInteger(-1);
     private String finalProposalValue = null;
 
-    public OtherMember(String nodeId, List<String> acceptorAddresses) {
+    public OtherMember(String nodeId, int acceptorPort, List<String> acceptorAddresses) {
+        this.acceptorPort = acceptorPort;
         this.nodeId = nodeId;
     }
 

@@ -27,7 +27,8 @@ public class M2Member extends Member{
     // 模拟M2网络连接的状态
     private boolean atCafe;
 
-    public M2Member(List<String> acceptorAddresses) {
+    public M2Member(int acceptorPort, List<String> acceptorAddresses) {
+        this.acceptorPort = acceptorPort;
         this.acceptorAddresses = acceptorAddresses;
     }
 

@@ -1,12 +1,14 @@
 package edu.adelaide.council;
 
 import edu.adelaide.council.member.Member;
+import edu.adelaide.council.paxos.PaxosCoordinator;
 
 public class Main {
-//    @Value
-    String a;
+
 
     public static void main(String[] args) {
-
+        PaxosCoordinator pc = new PaxosCoordinator();
+//        pc.buildElectionData();
+        pc.runElection();
     }
 }

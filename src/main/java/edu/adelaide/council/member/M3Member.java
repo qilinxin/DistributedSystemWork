@@ -28,7 +28,8 @@ public class M3Member extends Member{
     // 模拟M3的网络连接状态
     private boolean isDisconnected;
 
-    public M3Member(List<String> acceptorAddresses) {
+    public M3Member(int acceptorPort, List<String> acceptorAddresses) {
+        this.acceptorPort = acceptorPort;
         this.acceptorAddresses = acceptorAddresses;
     }
 

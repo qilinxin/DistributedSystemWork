@@ -1,4 +1,4 @@
-package edu.adelaide.council.paxos.dto;
+package edu.adelaide.council.dto;
 
 public class MessageDTO {
 

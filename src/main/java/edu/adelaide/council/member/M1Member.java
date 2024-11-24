@@ -2,7 +2,7 @@ package edu.adelaide.council.member;
 
 import com.google.gson.Gson;
 import edu.adelaide.council.paxos.PaxosCoordinator;
-import edu.adelaide.council.paxos.dto.MessageDTO;
+import edu.adelaide.council.dto.MessageDTO;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
@@ -15,8 +15,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class M1Member extends Member {
 
+    private int memberId = 1;
     private String proposerId;
-    private final List<String> acceptorAddresses;
     private final AtomicInteger promisedProposalNumber = new AtomicInteger(-1);
     private int acceptedProposalNumber = -1;
     private String acceptedValue = null;
@@ -24,7 +24,8 @@ public class M1Member extends Member {
     private String finalProposalValue = null;
     private final Gson gson = new Gson();
 
-    public M1Member(List<String> acceptorAddresses) {
+    public M1Member(int acceptorPort, List<String> acceptorAddresses) {
+        this.acceptorPort = acceptorPort;
         this.acceptorAddresses = acceptorAddresses;
     }
 
@@ -32,7 +33,7 @@ public class M1Member extends Member {
     public void propose() {
         int proposalId = PaxosCoordinator.getNextProposalId();
         int promisesReceived = 0;
-
+        String proposed_value = "Suggest M1 to become chairman";
         // 发送PREPARE请求给所有的接受者，增加超时重试机制
         for (String address : acceptorAddresses) {
             boolean success = false;
@@ -46,7 +47,6 @@ public class M1Member extends Member {
                     int port = Integer.parseInt(parts[1]);
 
                     try (Socket socket = new Socket(host, port)) {
-                        socket.setSoTimeout(2000); // 设置超时时间为2000毫秒
                         PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
                         BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
 
@@ -54,13 +54,14 @@ public class M1Member extends Member {
                         MessageDTO message = new MessageDTO();
                         message.setType("PREPARE");
                         message.setProposalId(proposalId);
+                        message.setInfo(proposed_value);
                         String jsonMessage = gson.toJson(message);
-
+                        System.out.println("propose jsonMessage: " + jsonMessage);
                         out.println(jsonMessage);
                         String jsonResponse = in.readLine();
                         MessageDTO response = gson.fromJson(jsonResponse, MessageDTO.class);
 
-                        if ("PROMISE".equals(response.getType())) {
+                        if ("AGREE".equals(response.getType())) {
                             promisesReceived++;
                         }
                         success = true;
@@ -77,6 +78,8 @@ public class M1Member extends Member {
 
         // 如果收到多数承诺，发送ACCEPT请求
         if (promisesReceived > acceptorAddresses.size() / 2) {
+            System.out.println("M1Member proposal promise received: " + promisesReceived);
+            int acceptCount = 0;
             for (String address : acceptorAddresses) {
                 boolean success = false;
                 int retryCount = 0;
@@ -89,17 +92,25 @@ public class M1Member extends Member {
                         int port = Integer.parseInt(parts[1]);
 
                         try (Socket socket = new Socket(host, port)) {
-                            socket.setSoTimeout(2000); // 设置超时时间为2000毫秒
+                            socket.setSoTimeout(10000); // 设置超时时间为2000毫秒
                             PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
+                            BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
 
                             // 构建MessageDTO对象并转换为JSON字符串
                             MessageDTO message = new MessageDTO();
                             message.setType("ACCEPT");
                             message.setProposalId(proposalId);
-                            message.setInfo("proposed_value");
+                            message.setInfo(proposed_value);
                             String jsonMessage = gson.toJson(message);
-
+                            System.out.println("ACCEPT jsonMessage: " + jsonMessage);
                             out.println(jsonMessage);
+
+                            String jsonResponse = in.readLine();
+                            MessageDTO response = gson.fromJson(jsonResponse, MessageDTO.class);
+
+                            if ("ACCEPTED".equals(response.getType())) {
+                                acceptCount++;
+                            }
                             success = true;
                         }
                     } catch (SocketTimeoutException e) {
@@ -111,17 +122,26 @@ public class M1Member extends Member {
                     }
                 }
             }
+
+            // 如果超过半数节点接受了提案,更新缓存信息，结束选举
+            if (acceptCount > acceptorAddresses.size() / 2) {
+                System.out.println("Proposal accepted by majority, ending program...");
+                PaxosCoordinator.setStatusCache(1);
+            } else {
+                //需要重新处罚选举流程，设置缓存为指定值
+                PaxosCoordinator.setStatusCache(99);
+            }
         } else {
             System.out.println("Proposal failed to gather majority promises.");
         }
     }
 
+
     // Acceptor角色：处理请求
     public void startAcceptor(int port) {
+        System.out.println("M1Member starting acceptor on port " + port);
         new Thread(() -> {
             try (ServerSocket serverSocket = new ServerSocket(port)) {
-                System.out.println("Acceptor started on port: " + port);
-
                 while (true) {
                     Socket proposerSocket = serverSocket.accept();
                     try (BufferedReader in = new BufferedReader(new InputStreamReader(proposerSocket.getInputStream()));
@@ -132,12 +152,13 @@ public class M1Member extends Member {
                         String messageType = message.getType();
                         int proposalNumber = message.getProposalId();
                         String proposalValue = message.getInfo();
-
                         switch (messageType) {
                             case "PREPARE":
-                                handlePrepare(proposalNumber, out);
+                                System.out.println("M1Member receive proposal:" + proposalValue);
+                                handlePrepare(proposalNumber, proposalValue, out);
                                 break;
                             case "ACCEPT":
+                                System.out.println("M1Member receive result:" + proposalValue);
                                 handleAccept(proposalNumber, proposalValue, out);
                                 break;
                             default:
@@ -153,16 +174,18 @@ public class M1Member extends Member {
         }).start();
     }
 
-    private void handlePrepare(int proposalNumber, PrintWriter out) {
+    private void handlePrepare(int proposalNumber, String proposalValue, PrintWriter out) {
         MessageDTO response = new MessageDTO();
         response.setProposalId(proposalNumber);
 
-        if (proposalNumber > promisedProposalNumber.get()) {
+        if (proposalNumber > promisedProposalNumber.get() && proposalValue.contains("M1")) {
             promisedProposalNumber.set(proposalNumber);
-            response.setType("PROMISE");
+            response.setType("AGREE");
             response.setInfo(acceptedValue);
+            System.out.println("M1 agree proposal: " + proposalValue);
         } else {
             response.setType("REJECT");
+            System.out.println("M1 reject proposal: " + proposalValue);
         }
 
         String jsonResponse = gson.toJson(response);
@@ -185,44 +208,6 @@ public class M1Member extends Member {
 
         String jsonResponse = gson.toJson(response);
         out.println(jsonResponse);
-    }
-
-    // Learner角色：学习最终的提案
-    public void startLearner(int port) {
-        new Thread(() -> {
-            try (ServerSocket serverSocket = new ServerSocket(port)) {
-                System.out.println("Learner started on port: " + port);
-
-                while (true) {
-                    Socket acceptorSocket = serverSocket.accept();
-                    try (BufferedReader in = new BufferedReader(new InputStreamReader(acceptorSocket.getInputStream()))) {
-                        String jsonMessage = in.readLine();
-                        MessageDTO message = gson.fromJson(jsonMessage, MessageDTO.class);
-                        String messageType = message.getType();
-                        int proposalNumber = message.getProposalId();
-                        String proposalValue = message.getInfo();
-
-                        if ("ACCEPTED".equals(messageType)) {
-                            handleAccepted(proposalNumber, proposalValue);
-                        } else {
-                            System.err.println("Unknown message type: " + messageType);
-                        }
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                    }
-                }
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        }).start();
-    }
-
-    private void handleAccepted(int proposalNumber, String proposalValue) {
-        if (proposalNumber > finalProposalNumber.get()) {
-            finalProposalNumber.set(proposalNumber);
-            finalProposalValue = proposalValue;
-            System.out.println("Learner learned new proposal: " + proposalNumber + " with value: " + proposalValue);
-        }
     }
 }
 
