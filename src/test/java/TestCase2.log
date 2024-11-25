@@ -1,0 +1,71 @@
+/Library/Java/JavaVirtualMachines/jdk-22.jdk/Contents/Home/bin/java -javaagent:/Applications/IntelliJ IDEA.app/Contents/lib/idea_rt.jar=64561:/Applications/IntelliJ IDEA.app/Contents/bin -Dfile.encoding=UTF-8 -Dsun.stdout.encoding=UTF-8 -Dsun.stderr.encoding=UTF-8 -classpath /Users/qilinxin0421/JavaProjects/DIstributedSystemWork/out/test/Assignment3:/Users/qilinxin0421/JavaProjects/DIstributedSystemWork/out/production/Assignment3:/Users/qilinxin0421/.m2/repository/com/google/code/gson/gson/2.10.1/gson-2.10.1.jar:/Users/qilinxin0421/.m2/repository/org/slf4j/slf4j-api/2.0.7/slf4j-api-2.0.7.jar:/Users/qilinxin0421/.m2/repository/ch/qos/logback/logback-classic/1.4.7/logback-classic-1.4.7.jar:/Users/qilinxin0421/.m2/repository/ch/qos/logback/logback-core/1.4.7/logback-core-1.4.7.jar TestCase2
+23:19:07.584 [main] INFO edu.adelaide.council.paxos.PaxosCoordinator -- ------------------runElection start------------------
+23:19:07.615 [pool-1-thread-2] INFO edu.adelaide.council.member.Member -- M2Member starting acceptor on port 5002
+23:19:07.615 [pool-1-thread-5] INFO edu.adelaide.council.member.Member -- OtherMember starting acceptor on port 5005
+23:19:07.615 [pool-1-thread-8] INFO edu.adelaide.council.member.Member -- OtherMember starting acceptor on port 5008
+23:19:07.615 [pool-1-thread-4] INFO edu.adelaide.council.member.Member -- OtherMember starting acceptor on port 5004
+23:19:07.615 [pool-1-thread-7] INFO edu.adelaide.council.member.Member -- OtherMember starting acceptor on port 5007
+23:19:07.615 [pool-1-thread-6] INFO edu.adelaide.council.member.Member -- OtherMember starting acceptor on port 5006
+23:19:07.615 [pool-1-thread-3] INFO edu.adelaide.council.member.Member -- M3Member starting acceptor on port 5003
+23:19:07.615 [pool-1-thread-9] INFO edu.adelaide.council.member.Member -- OtherMember starting acceptor on port 5009
+23:19:07.615 [main] INFO edu.adelaide.council.paxos.PaxosCoordinator -- -------- M1 prepare to send the proposal--------------------
+23:19:07.615 [pool-1-thread-1] INFO edu.adelaide.council.member.Member -- M1Member starting acceptor on port 5001
+23:19:07.618 [Thread-9] INFO edu.adelaide.council.paxos.PaxosCoordinator -- current status is ===== -1
+23:19:09.618 [Thread-9] INFO edu.adelaide.council.paxos.PaxosCoordinator -- current status is ===== -1
+23:19:11.624 [Thread-9] INFO edu.adelaide.council.paxos.PaxosCoordinator -- current status is ===== -1
+23:19:12.649 [Thread-3] INFO edu.adelaide.council.member.Member -- M1 agree proposalNumber == 1, proposal: Suggest M1 to become chairman
+23:19:12.651 [Thread-0] INFO edu.adelaide.council.member.Member -- M2 rejected proposalNumber == 1, proposal: Suggest M1 to become chairman, because not M2!
+23:19:12.652 [Thread-4] INFO edu.adelaide.council.member.Member -- PROMISED_PROPOSAL_NUMBER == 1, proposalNumber == 1, proposalNumber > PROMISED_PROPOSAL_NUMBER.get(): false
+23:19:12.652 [Thread-4] INFO edu.adelaide.council.member.Member -- M3 rejected proposalNumber == 1, proposal: Suggest M1 to become chairman, because not M3!
+23:19:12.653 [Thread-2] INFO edu.adelaide.council.member.Member -- M4 rejected proposalNumber == 1, proposal: Suggest M1 to become chairman
+23:19:12.653 [Thread-5] INFO edu.adelaide.council.member.Member -- M5 rejected proposalNumber == 1, proposal: Suggest M1 to become chairman
+23:19:12.654 [Thread-7] INFO edu.adelaide.council.member.Member -- M6 rejected proposalNumber == 1, proposal: Suggest M1 to become chairman
+23:19:12.654 [Thread-1] INFO edu.adelaide.council.member.Member -- M7 agreed to proposalNumber == 1, proposal: Suggest M1 to become chairman
+23:19:12.655 [Thread-8] INFO edu.adelaide.council.member.Member -- M8 agreed to proposalNumber == 1, proposal: Suggest M1 to become chairman
+23:19:12.655 [Thread-6] INFO edu.adelaide.council.member.Member -- M9 rejected proposalNumber == 1, proposal: Suggest M1 to become chairman
+23:19:12.655 [pool-1-thread-7] INFO edu.adelaide.council.member.Member -- The proposal 1 send by M1 received 3 agreements
+23:19:13.625 [Thread-9] INFO edu.adelaide.council.paxos.PaxosCoordinator -- current status is ===== 99
+23:19:13.625 [Thread-9] INFO edu.adelaide.council.paxos.PaxosCoordinator -- -------- M3 prepare to send the proposal--------------------
+23:19:13.625 [Thread-9] INFO edu.adelaide.council.paxos.PaxosCoordinator -- current status is ===== -1
+23:19:15.630 [Thread-9] INFO edu.adelaide.council.paxos.PaxosCoordinator -- current status is ===== -1
+23:19:17.635 [Thread-9] INFO edu.adelaide.council.paxos.PaxosCoordinator -- current status is ===== -1
+23:19:18.628 [Thread-3] INFO edu.adelaide.council.member.Member -- M1 reject proposalNumber == 2, proposal: Suggest M3 to become chairman, because not M1!!
+23:19:18.630 [Thread-0] INFO edu.adelaide.council.member.Member -- M2 rejected proposalNumber == 2, proposal: Suggest M3 to become chairman, because not M2!
+23:19:18.631 [Thread-4] INFO edu.adelaide.council.member.Member -- PROMISED_PROPOSAL_NUMBER == 1, proposalNumber == 2, proposalNumber > PROMISED_PROPOSAL_NUMBER.get(): true
+23:19:18.631 [Thread-4] INFO edu.adelaide.council.member.Member -- M3 agreed to proposalNumber == 2, proposal: Suggest M3 to become chairman
+23:19:18.632 [Thread-2] INFO edu.adelaide.council.member.Member -- M4 rejected proposalNumber == 2, proposal: Suggest M3 to become chairman
+23:19:18.633 [Thread-5] INFO edu.adelaide.council.member.Member -- M5 rejected proposalNumber == 2, proposal: Suggest M3 to become chairman
+23:19:18.634 [Thread-7] INFO edu.adelaide.council.member.Member -- M6 rejected proposalNumber == 2, proposal: Suggest M3 to become chairman
+23:19:18.635 [Thread-1] INFO edu.adelaide.council.member.Member -- M7 agreed to proposalNumber == 2, proposal: Suggest M3 to become chairman
+23:19:18.636 [Thread-8] INFO edu.adelaide.council.member.Member -- M8 agreed to proposalNumber == 2, proposal: Suggest M3 to become chairman
+23:19:18.636 [Thread-6] INFO edu.adelaide.council.member.Member -- M9 rejected proposalNumber == 2, proposal: Suggest M3 to become chairman
+23:19:18.637 [pool-1-thread-6] INFO edu.adelaide.council.member.Member -- The proposal 2 send by M3 received 3 agreements
+23:19:19.641 [Thread-9] INFO edu.adelaide.council.paxos.PaxosCoordinator -- current status is ===== 99
+23:19:19.641 [Thread-9] INFO edu.adelaide.council.paxos.PaxosCoordinator -- -------- M3 prepare to send the proposal--------------------
+23:19:19.641 [Thread-9] INFO edu.adelaide.council.paxos.PaxosCoordinator -- current status is ===== -1
+23:19:21.644 [Thread-9] INFO edu.adelaide.council.paxos.PaxosCoordinator -- current status is ===== -1
+23:19:23.648 [Thread-9] INFO edu.adelaide.council.paxos.PaxosCoordinator -- current status is ===== -1
+23:19:24.649 [Thread-3] INFO edu.adelaide.council.member.Member -- M1 reject proposalNumber == 3, proposal: Suggest M3 to become chairman, because not M1!!
+23:19:24.651 [Thread-0] INFO edu.adelaide.council.member.Member -- M2 rejected proposalNumber == 3, proposal: Suggest M3 to become chairman, because not M2!
+23:19:24.653 [Thread-4] INFO edu.adelaide.council.member.Member -- PROMISED_PROPOSAL_NUMBER == 2, proposalNumber == 3, proposalNumber > PROMISED_PROPOSAL_NUMBER.get(): true
+23:19:24.653 [Thread-4] INFO edu.adelaide.council.member.Member -- M3 agreed to proposalNumber == 3, proposal: Suggest M3 to become chairman
+23:19:24.654 [Thread-2] INFO edu.adelaide.council.member.Member -- M4 agreed to proposalNumber == 3, proposal: Suggest M3 to become chairman
+23:19:24.655 [Thread-5] INFO edu.adelaide.council.member.Member -- M5 rejected proposalNumber == 3, proposal: Suggest M3 to become chairman
+23:19:24.656 [Thread-7] INFO edu.adelaide.council.member.Member -- M6 agreed to proposalNumber == 3, proposal: Suggest M3 to become chairman
+23:19:24.656 [Thread-1] INFO edu.adelaide.council.member.Member -- M7 agreed to proposalNumber == 3, proposal: Suggest M3 to become chairman
+23:19:24.657 [Thread-8] INFO edu.adelaide.council.member.Member -- M8 agreed to proposalNumber == 3, proposal: Suggest M3 to become chairman
+23:19:24.658 [Thread-6] INFO edu.adelaide.council.member.Member -- M9 rejected proposalNumber == 3, proposal: Suggest M3 to become chairman
+23:19:24.658 [pool-1-thread-8] INFO edu.adelaide.council.member.Member -- The proposal 3 send by M3 received 5 agreements
+23:19:24.659 [Thread-3] INFO edu.adelaide.council.member.Member -- M1 accepted proposal: Suggest M3 to become chairman
+23:19:24.660 [Thread-0] INFO edu.adelaide.council.member.Member -- M2 accepted proposal: Suggest M3 to become chairman
+23:19:24.661 [Thread-4] INFO edu.adelaide.council.member.Member -- M3 accepted proposal: Suggest M3 to become chairman
+23:19:24.662 [Thread-2] INFO edu.adelaide.council.member.Member -- M4 accepted proposal: Suggest M3 to become chairman
+23:19:24.665 [Thread-5] INFO edu.adelaide.council.member.Member -- M5 accepted proposal: Suggest M3 to become chairman
+23:19:24.666 [Thread-7] INFO edu.adelaide.council.member.Member -- M6 accepted proposal: Suggest M3 to become chairman
+23:19:24.667 [Thread-1] INFO edu.adelaide.council.member.Member -- M7 accepted proposal: Suggest M3 to become chairman
+23:19:24.668 [Thread-8] INFO edu.adelaide.council.member.Member -- M8 accepted proposal: Suggest M3 to become chairman
+23:19:24.669 [Thread-6] INFO edu.adelaide.council.member.Member -- M9 accepted proposal: Suggest M3 to become chairman
+23:19:24.669 [pool-1-thread-8] INFO edu.adelaide.council.member.Member -- The proposal 3 received by 9 members
+23:19:25.652 [Thread-9] INFO edu.adelaide.council.paxos.PaxosCoordinator -- Consensus reached! M3 become the chairman !!
+
+Process finished with exit code 0
