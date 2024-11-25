@@ -11,26 +11,24 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketTimeoutException;
 import java.util.List;
-import java.util.Random;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class M3Member extends Member {
 
-    private final Gson gson = new Gson();
-    private final AtomicInteger promisedProposalNumber = new AtomicInteger(-1);
-    private int acceptedProposalNumber = -1;
+    private static final Gson gson = new Gson();
+    private static final AtomicInteger PROMISED_PROPOSAL_NUMBER = new AtomicInteger(-1);
     private String acceptedValue = null;
-    private final boolean disconnected;
+    private static boolean DISCONNECTED;
 
     public M3Member(int acceptorPort, List<String> acceptorAddresses) {
         this.acceptorPort = acceptorPort;
         this.acceptorAddresses = acceptorAddresses;
-        this.disconnected = new Random().nextBoolean();
+        DISCONNECTED = PaxosCoordinator.getRandomWithProbability(0.2 * Integer.parseInt(PaxosCoordinator.DELAY_VALUE));
     }
 
     // Proposer角色：发起提案
     public void propose() {
-        if (disconnected) {
+        if (DISCONNECTED) {
             System.out.println("M3 is camping in the Coorong and is completely disconnected.");
             //需要重新处罚选举流程，设置缓存为指定值
             PaxosCoordinator.setStatusCache(99);
@@ -77,6 +75,7 @@ public class M3Member extends Member {
                     System.err.println("Timeout while sending PREPARE to: " + address + ", retrying... (" + retryCount + "/" + maxRetries + ")");
                 } catch (Exception e) {
                     System.err.println("Failed to send PREPARE to: " + address);
+                    e.printStackTrace();
                     break; // 非超时的异常，跳出重试循环
                 }
             }
@@ -147,7 +146,7 @@ public class M3Member extends Member {
 
     // Acceptor角色：处理请求
     public void startAcceptor(int port) {
-        if (disconnected) {
+        if (DISCONNECTED) {
             System.out.println("M3 is camping in the Coorong and is completely disconnected.");
             return;
         }
@@ -189,15 +188,19 @@ public class M3Member extends Member {
     private void handlePrepare(int proposalNumber, String proposalValue, PrintWriter out) {
         MessageDTO response = new MessageDTO();
         response.setProposalId(proposalNumber);
-
-        if (proposalNumber > promisedProposalNumber.get() && proposalValue.contains("M3")) {
-            promisedProposalNumber.set(proposalNumber);
-            response.setType("AGREE");
-            response.setInfo(acceptedValue);
-            System.out.println("M3 agree proposal: " + proposalValue);
+        System.out.println("PROMISED_PROPOSAL_NUMBER == " +  PROMISED_PROPOSAL_NUMBER.get() + ", proposalNumber == " + proposalNumber + ",proposalNumber > PROMISED_PROPOSAL_NUMBER.get()" + (proposalNumber > PROMISED_PROPOSAL_NUMBER.get()));
+        if (proposalNumber > PROMISED_PROPOSAL_NUMBER.get()) {
+            if (proposalValue.contains("M3")) {
+                PROMISED_PROPOSAL_NUMBER.set(proposalNumber);
+                response.setType("AGREE");
+                response.setInfo(acceptedValue);
+                System.out.println("M3 agree  proposalNumber == " + proposalNumber + ", proposal: " + proposalValue);
+            } else {
+                System.out.println("M3 reject proposalNumber == " + proposalNumber + ", proposal: " + proposalValue + ", because not M3!!");
+            }
         } else {
             response.setType("REJECT");
-            System.out.println("M3 reject proposal: " + proposalValue);
+            System.out.println("M3 reject proposalNumber == " + proposalNumber + ", proposal: " + proposalValue + ", because version outdated!!");
         }
 
         String jsonResponse = gson.toJson(response);
@@ -208,9 +211,8 @@ public class M3Member extends Member {
         MessageDTO response = new MessageDTO();
         response.setProposalId(proposalNumber);
 
-        if (proposalNumber >= promisedProposalNumber.get()) {
-            promisedProposalNumber.set(proposalNumber);
-            acceptedProposalNumber = proposalNumber;
+        if (proposalNumber >= PROMISED_PROPOSAL_NUMBER.get()) {
+            PROMISED_PROPOSAL_NUMBER.set(proposalNumber);
             acceptedValue = proposalValue;
             response.setType("ACCEPTED");
             response.setInfo(proposalValue);

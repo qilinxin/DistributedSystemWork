@@ -16,16 +16,16 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class M2Member extends Member {
 
-    private final Gson gson = new Gson();
-    private final AtomicInteger promisedProposalNumber = new AtomicInteger(-1);
-    private int acceptedProposalNumber = -1;
-    private String acceptedValue = null;
-    private final boolean atCafe;
+    private static final Gson GSON = new Gson();
+    private static final AtomicInteger PROMISED_PROPOSAL_NUMBER = new AtomicInteger(-1);
+    private static final String ACCEPTED_VALUE = null;
+
+    private static boolean atCafe;
 
     public M2Member(int acceptorPort, List<String> acceptorAddresses) {
         this.acceptorPort = acceptorPort;
         this.acceptorAddresses = acceptorAddresses;
-        this.atCafe = new Random().nextBoolean();
+        atCafe = PaxosCoordinator.getRandomWithProbability(1 - (0.1 * Integer.parseInt(PaxosCoordinator.DELAY_VALUE)));
     }
 
     // Proposer角色：发起提案
@@ -61,11 +61,11 @@ public class M2Member extends Member {
                         message.setType("PREPARE");
                         message.setProposalId(proposalId);
                         message.setInfo(proposed_value);
-                        String jsonMessage = gson.toJson(message);
+                        String jsonMessage = GSON.toJson(message);
                         System.out.println("propose jsonMessage: " + jsonMessage);
                         out.println(jsonMessage);
                         String jsonResponse = in.readLine();
-                        MessageDTO response = gson.fromJson(jsonResponse, MessageDTO.class);
+                        MessageDTO response = GSON.fromJson(jsonResponse, MessageDTO.class);
 
                         if ("AGREE".equals(response.getType())) {
                             agreeCount++;
@@ -77,6 +77,7 @@ public class M2Member extends Member {
                     System.err.println("Timeout while sending PREPARE to: " + address + ", retrying... (" + retryCount + "/" + maxRetries + ")");
                 } catch (Exception e) {
                     System.err.println("Failed to send PREPARE to: " + address);
+                    e.printStackTrace();
                     break; // 非超时的异常，跳出重试循环
                 }
             }
@@ -107,12 +108,12 @@ public class M2Member extends Member {
                             message.setType("ACCEPT");
                             message.setProposalId(proposalId);
                             message.setInfo(proposed_value);
-                            String jsonMessage = gson.toJson(message);
+                            String jsonMessage = GSON.toJson(message);
                             System.out.println("ACCEPT jsonMessage: " + jsonMessage);
                             out.println(jsonMessage);
 
                             String jsonResponse = in.readLine();
-                            MessageDTO response = gson.fromJson(jsonResponse, MessageDTO.class);
+                            MessageDTO response = GSON.fromJson(jsonResponse, MessageDTO.class);
 
                             if ("ACCEPTED".equals(response.getType())) {
                                 acceptCount++;
@@ -161,7 +162,7 @@ public class M2Member extends Member {
                          PrintWriter out = new PrintWriter(proposerSocket.getOutputStream(), true)) {
 
                         String jsonMessage = in.readLine();
-                        MessageDTO message = gson.fromJson(jsonMessage, MessageDTO.class);
+                        MessageDTO message = GSON.fromJson(jsonMessage, MessageDTO.class);
                         String messageType = message.getType();
                         int proposalNumber = message.getProposalId();
                         String proposalValue = message.getInfo();
@@ -191,17 +192,21 @@ public class M2Member extends Member {
         MessageDTO response = new MessageDTO();
         response.setProposalId(proposalNumber);
 
-        if (proposalNumber > promisedProposalNumber.get() && proposalValue.contains("M2")) {
-            promisedProposalNumber.set(proposalNumber);
-            response.setType("AGREE");
-            response.setInfo(acceptedValue);
-            System.out.println("M2 agree proposal: " + proposalValue);
+        if (proposalNumber > PROMISED_PROPOSAL_NUMBER.get()) {
+            if (proposalValue.contains("M2")) {
+                PROMISED_PROPOSAL_NUMBER.set(proposalNumber);
+                response.setType("AGREE");
+                response.setInfo(ACCEPTED_VALUE);
+                System.out.println("M2 agree proposalNumber == " + proposalNumber + ", proposal: " + proposalValue);
+            } else {
+                System.out.println("M2 reject proposalNumber == " + proposalNumber + ", proposal: " + proposalValue + ", because not M2!!");
+            }
         } else {
             response.setType("REJECT");
-            System.out.println("M2 reject proposal: " + proposalValue);
+            System.out.println("M2 reject proposalNumber == " + proposalNumber + ", proposal: " + proposalValue + ", because version outdated!!");
         }
 
-        String jsonResponse = gson.toJson(response);
+        String jsonResponse = GSON.toJson(response);
         out.println(jsonResponse);
     }
 
@@ -209,17 +214,15 @@ public class M2Member extends Member {
         MessageDTO response = new MessageDTO();
         response.setProposalId(proposalNumber);
 
-        if (proposalNumber >= promisedProposalNumber.get()) {
-            promisedProposalNumber.set(proposalNumber);
-            acceptedProposalNumber = proposalNumber;
-            acceptedValue = proposalValue;
+        if (proposalNumber >= PROMISED_PROPOSAL_NUMBER.get()) {
+            PROMISED_PROPOSAL_NUMBER.set(proposalNumber);
             response.setType("ACCEPTED");
             response.setInfo(proposalValue);
         } else {
             response.setType("REJECT");
         }
 
-        String jsonResponse = gson.toJson(response);
+        String jsonResponse = GSON.toJson(response);
         out.println(jsonResponse);
     }
 }

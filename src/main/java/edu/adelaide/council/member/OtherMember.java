@@ -6,30 +6,22 @@ import edu.adelaide.council.dto.MessageDTO;
 import edu.adelaide.council.paxos.PaxosCoordinator;
 
 import java.io.BufferedReader;
-import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.util.List;
 import java.util.Random;
-import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.ArrayList;
-import java.util.Properties;
-import java.io.FileInputStream;
 
 public class OtherMember extends Member{
 
-    private static final Gson gson = new Gson();
-    private static final Random random = new Random();
+    private static final Gson GSON = new Gson();
+    private static final Random RANDOM = new Random();
+    private static final AtomicInteger PROMISED_PROPOSAL_NUMBER = new AtomicInteger(-1);
 
-    private String nodeId;
-    private AtomicInteger promisedProposalNumber = new AtomicInteger(-1);
-    private int acceptedProposalNumber = -1;
-    private String acceptedValue = null;
-    private AtomicInteger finalProposalNumber = new AtomicInteger(-1);
-    private String finalProposalValue = null;
+    private static String ACCEPTED_VALUE = null;
+
+    private final String nodeId;
 
     public OtherMember(String nodeId, int acceptorPort) {
         this.acceptorPort = acceptorPort;
@@ -48,7 +40,7 @@ public class OtherMember extends Member{
                          PrintWriter out = new PrintWriter(proposerSocket.getOutputStream(), true)) {
 
                         String jsonMessage = in.readLine();
-                        MessageDTO message = gson.fromJson(jsonMessage, MessageDTO.class);
+                        MessageDTO message = GSON.fromJson(jsonMessage, MessageDTO.class);
                         String messageType = message.getType();
                         int proposalNumber = message.getProposalId();
                         String proposalValue = message.getInfo();
@@ -77,18 +69,25 @@ public class OtherMember extends Member{
     private void handlePrepare(int proposalNumber, String proposalValue, PrintWriter out) {
         MessageDTO response = new MessageDTO();
         response.setProposalId(proposalNumber);
+        System.out.println(nodeId +  " PROMISED_PROPOSAL_NUMBER == " +  PROMISED_PROPOSAL_NUMBER.get() + ", proposalNumber == " + proposalNumber + ",proposalNumber > PROMISED_PROPOSAL_NUMBER.get()" + (proposalNumber > PROMISED_PROPOSAL_NUMBER.get()));
 
-        if (proposalNumber > promisedProposalNumber.get() && random.nextBoolean()) {
-            promisedProposalNumber.set(proposalNumber);
-            response.setType("AGREE");
-            response.setInfo(acceptedValue);
-            System.out.println(nodeId + " agree proposal: " + proposalValue);
+        if (proposalNumber > PROMISED_PROPOSAL_NUMBER.get()) {
+            response.setInfo(ACCEPTED_VALUE);
+            PROMISED_PROPOSAL_NUMBER.set(proposalNumber);
+
+            if (RANDOM.nextBoolean()) {
+                response.setType("AGREE");
+                System.out.println(nodeId + " agree proposalNumber == " + proposalNumber + ", proposal: " + proposalValue);
+            } else {
+                response.setType("REJECT");
+                System.out.println(nodeId + " reject proposalNumber == " + proposalNumber + ", proposal: " + proposalValue);
+            }
         } else {
             response.setType("REJECT");
-            System.out.println(nodeId + " reject proposal: " + proposalValue);
+            System.out.println(nodeId + " reject proposalNumber == " + proposalNumber + ", proposal: " + proposalValue + ", because version outdated!!");
         }
 
-        String jsonResponse = gson.toJson(response);
+        String jsonResponse = GSON.toJson(response);
         out.println(jsonResponse);
     }
 
@@ -96,17 +95,16 @@ public class OtherMember extends Member{
         MessageDTO response = new MessageDTO();
         response.setProposalId(proposalNumber);
 
-        if (proposalNumber >= promisedProposalNumber.get()) {
-            promisedProposalNumber.set(proposalNumber);
-            acceptedProposalNumber = proposalNumber;
-            acceptedValue = proposalValue;
+        if (proposalNumber >= PROMISED_PROPOSAL_NUMBER.get()) {
+            PROMISED_PROPOSAL_NUMBER.set(proposalNumber);
+            ACCEPTED_VALUE = proposalValue;
             response.setType("ACCEPTED");
             response.setInfo(proposalValue);
         } else {
             response.setType("REJECT");
         }
 
-        String jsonResponse = gson.toJson(response);
+        String jsonResponse = GSON.toJson(response);
         out.println(jsonResponse);
     }
 

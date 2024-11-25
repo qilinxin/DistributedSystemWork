@@ -67,8 +67,8 @@ public class M1Member extends Member {
                     retryCount++;
                     System.err.println("Timeout while sending PREPARE to: " + address + ", retrying... (" + retryCount + "/" + maxRetries + ")");
                 } catch (Exception e) {
-                    System.err.println("Failed to send PREPARE to: " + address);
-                    e.printStackTrace();
+                    System.err.println("Failed to send REQUEST to: " + address);
+//                    e.printStackTrace();
                     break; // 非超时的异常，跳出重试循环
                 }
             }
@@ -180,14 +180,18 @@ public class M1Member extends Member {
         MessageDTO response = new MessageDTO();
         response.setProposalId(proposalNumber);
 
-        if (proposalNumber > promisedProposalNumber.get() && proposalValue.contains("M1")) {
-            promisedProposalNumber.set(proposalNumber);
-            response.setType("AGREE");
-            response.setInfo(acceptedValue);
-            System.out.println("M1 agree proposal: " + proposalValue);
+        if (proposalNumber > promisedProposalNumber.get()) {
+            if (proposalValue.contains("M1")) {
+                promisedProposalNumber.set(proposalNumber);
+                response.setType("AGREE");
+                response.setInfo(acceptedValue);
+                System.out.println("M1 agree proposalNumber == " + proposalNumber + ", proposal: " + proposalValue);
+            } else {
+                System.out.println("M1 reject proposalNumber == " + proposalNumber + ", proposal: " + proposalValue + ", because not M1!!");
+            }
         } else {
             response.setType("REJECT");
-            System.out.println("M1 reject proposal: " + proposalValue);
+            System.out.println("M1 reject proposalNumber == " + proposalNumber + ", proposal: " + proposalValue + ", because version outdated!!");
         }
 
         String jsonResponse = gson.toJson(response);

@@ -18,7 +18,7 @@ public class PaxosCoordinator {
 
     private static final List<Integer> END_RESULT = Arrays.asList(1,2,3);
 
-    private static String DELAY_VALUE= "0";
+    public static String DELAY_VALUE= "0";
     public void runElection() {
         runElection(1, "0");
     }
@@ -70,8 +70,10 @@ public class PaxosCoordinator {
                         System.exit(0);
                     } else {
                         retryTimes.decrementAndGet();
-                        int randomInt = random.nextInt(3);
-                        executePropose(randomInt, executorService);
+                        for (int z = 0; z < concurrentNumber; z ++) {
+                            int randomInt = random.nextInt(3);
+                            executePropose(randomInt, executorService);
+                        }
                     }
                 } else {
                     try {
@@ -155,16 +157,21 @@ public class PaxosCoordinator {
         Random random = new Random();
         int delay = random.nextInt(maxDelay + 1); // 范围是 [0, maxDelay]
 
-        System.out.println("Applying delay: " + delay + " ms");
-
         // 应用延迟
         try {
             Thread.sleep(delay);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt(); // 恢复中断状态
-            System.out.println("Thread was interrupted!");
+        }
+    }
+
+    public static boolean getRandomWithProbability(double probability) {
+        // 验证概率值是否合理
+        if (probability < 0 || probability > 1) {
+            throw new IllegalArgumentException("Probability must be between 0 and 1");
         }
 
-        System.out.println("Delay completed.");
+        Random random = new Random();
+        return random.nextDouble() < probability; // 返回 true 的概率为指定值
     }
 }
