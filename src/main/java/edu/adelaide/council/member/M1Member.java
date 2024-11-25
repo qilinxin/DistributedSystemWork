@@ -12,13 +12,15 @@ import java.net.Socket;
 import java.net.SocketTimeoutException;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class M1Member extends Member {
 
+    private static final Logger log = LoggerFactory.getLogger(M1Member.class);
     private final Gson gson = new Gson();
 
     private final AtomicInteger promisedProposalNumber = new AtomicInteger(-1);
-    private int acceptedProposalNumber = -1;
     private String acceptedValue = null;
 
     public M1Member(int acceptorPort, List<String> acceptorAddresses) {
@@ -53,7 +55,7 @@ public class M1Member extends Member {
                         message.setProposalId(proposalId);
                         message.setInfo(proposed_value);
                         String jsonMessage = gson.toJson(message);
-                        System.out.println("propose jsonMessage: " + jsonMessage);
+                        log.info("propose jsonMessage: " + jsonMessage);
                         out.println(jsonMessage);
                         String jsonResponse = in.readLine();
                         MessageDTO response = gson.fromJson(jsonResponse, MessageDTO.class);
@@ -65,18 +67,17 @@ public class M1Member extends Member {
                     }
                 } catch (SocketTimeoutException e) {
                     retryCount++;
-                    System.err.println("Timeout while sending PREPARE to: " + address + ", retrying... (" + retryCount + "/" + maxRetries + ")");
+                    log.error("Timeout while sending PREPARE to: " + address + ", retrying... (" + retryCount + "/" + maxRetries + ")");
                 } catch (Exception e) {
-                    System.err.println("Failed to send REQUEST to: " + address);
-//                    e.printStackTrace();
+                    log.error("Failed to send REQUEST to: " + address);
                     break; // 非超时的异常，跳出重试循环
                 }
             }
         }
 
         // 如果收到多数承诺，发送ACCEPT请求
+        log.info("M1-------Member proposal promise received: " + agreeCount);
         if (agreeCount > acceptorAddresses.size() / 2) {
-            System.out.println("M1-------Member proposal promise received: " + agreeCount);
             int acceptCount = 0;
             for (String address : acceptorAddresses) {
                 boolean success = false;
@@ -90,7 +91,7 @@ public class M1Member extends Member {
                         int port = Integer.parseInt(parts[1]);
 
                         try (Socket socket = new Socket(host, port)) {
-                            socket.setSoTimeout(5000); // 设置超时时间为2000毫秒
+                            socket.setSoTimeout(5000); // 设置超时时间为5000毫秒
                             PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
                             BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
 
@@ -100,7 +101,7 @@ public class M1Member extends Member {
                             message.setProposalId(proposalId);
                             message.setInfo(proposed_value);
                             String jsonMessage = gson.toJson(message);
-                            System.out.println("ACCEPT jsonMessage: " + jsonMessage);
+                            log.info("ACCEPT jsonMessage: " + jsonMessage);
                             out.println(jsonMessage);
 
                             String jsonResponse = in.readLine();
@@ -113,10 +114,9 @@ public class M1Member extends Member {
                         }
                     } catch (SocketTimeoutException e) {
                         retryCount++;
-                        System.err.println("Timeout while sending ACCEPT to: " + address + ", retrying... (" + retryCount + "/" + maxRetries + ")");
+                        log.error("Timeout while sending ACCEPT to: " + address + ", retrying... (" + retryCount + "/" + maxRetries + ")");
                     } catch (Exception e) {
-                        System.err.println("Failed to send ACCEPT to: " + address);
-                        e.printStackTrace();
+                        log.error("Failed to send ACCEPT to: " + address, e);
                         break; // 非超时的异常，跳出重试循环
                     }
                 }
@@ -124,15 +124,15 @@ public class M1Member extends Member {
 
             // 如果超过半数节点接受了提案,更新缓存信息，结束选举
             if (acceptCount > acceptorAddresses.size() / 2) {
-                System.out.println("Proposal accepted by majority, ending program...");
+                log.info("Proposal accepted by majority, ending program...");
                 PaxosCoordinator.setStatusCache(1);
             } else {
-                //需要重新处罚选举流程，设置缓存为指定值
+                //需要重新触发选举流程，设置缓存为指定值
                 PaxosCoordinator.setStatusCache(99);
             }
         } else {
-            System.out.println("Proposal failed to gather majority promises.");
-            //需要重新处罚选举流程，设置缓存为指定值
+            log.info("Proposal failed to gather majority promises.");
+            //需要重新触发选举流程，设置缓存为指定值
             PaxosCoordinator.setStatusCache(99);
         }
 
@@ -141,7 +141,7 @@ public class M1Member extends Member {
 
     // Acceptor角色：处理请求
     public void startAcceptor(int port) {
-        System.out.println("M1Member starting acceptor on port " + port);
+        log.info("M1Member starting acceptor on port " + port);
         new Thread(() -> {
             try (ServerSocket serverSocket = new ServerSocket(port)) {
                 while (true) {
@@ -156,22 +156,22 @@ public class M1Member extends Member {
                         String proposalValue = message.getInfo();
                         switch (messageType) {
                             case "PREPARE":
-                                System.out.println("M1Member receive proposal:" + proposalValue);
+                                log.info("M1Member receive proposal:" + proposalValue);
                                 handlePrepare(proposalNumber, proposalValue, out);
                                 break;
                             case "ACCEPT":
-                                System.out.println("M1Member receive result:" + proposalValue);
+                                log.info("M1Member receive result:" + proposalValue);
                                 handleAccept(proposalNumber, proposalValue, out);
                                 break;
                             default:
-                                System.err.println("Unknown message type: " + messageType);
+                                log.error("Unknown message type: " + messageType);
                         }
                     } catch (Exception e) {
-                        e.printStackTrace();
+                        log.error("Error handling proposer socket", e);
                     }
                 }
             } catch (Exception e) {
-                e.printStackTrace();
+                log.error("Error starting acceptor", e);
             }
         }).start();
     }
@@ -180,18 +180,18 @@ public class M1Member extends Member {
         MessageDTO response = new MessageDTO();
         response.setProposalId(proposalNumber);
 
-        if (proposalNumber > promisedProposalNumber.get()) {
+        if (proposalNumber >= promisedProposalNumber.get()) {
             if (proposalValue.contains("M1")) {
                 promisedProposalNumber.set(proposalNumber);
                 response.setType("AGREE");
                 response.setInfo(acceptedValue);
-                System.out.println("M1 agree proposalNumber == " + proposalNumber + ", proposal: " + proposalValue);
+                log.info("M1 agree proposalNumber == " + proposalNumber + ", proposal: " + proposalValue);
             } else {
-                System.out.println("M1 reject proposalNumber == " + proposalNumber + ", proposal: " + proposalValue + ", because not M1!!");
+                log.info("M1 reject proposalNumber == " + proposalNumber + ", proposal: " + proposalValue + ", because not M1!!");
             }
         } else {
             response.setType("REJECT");
-            System.out.println("M1 reject proposalNumber == " + proposalNumber + ", proposal: " + proposalValue + ", because version outdated!!");
+            log.info("M1 reject proposalNumber == " + proposalNumber + ", proposal: " + proposalValue + ", because version outdated!!");
         }
 
         String jsonResponse = gson.toJson(response);
@@ -204,7 +204,6 @@ public class M1Member extends Member {
 
         if (proposalNumber >= promisedProposalNumber.get()) {
             promisedProposalNumber.set(proposalNumber);
-            acceptedProposalNumber = proposalNumber;
             acceptedValue = proposalValue;
             response.setType("ACCEPTED");
             response.setInfo(proposalValue);
@@ -216,5 +215,3 @@ public class M1Member extends Member {
         out.println(jsonResponse);
     }
 }
-
-
