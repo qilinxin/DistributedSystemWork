@@ -1,5 +1,7 @@
 package edu.adelaide.council.member;
 
+import edu.adelaide.council.paxos.PaxosAcceptor;
+import edu.adelaide.council.paxos.PaxosProposer;
 import edu.adelaide.council.dto.MessageDTO;
 
 import java.io.PrintWriter;
@@ -7,10 +9,13 @@ import java.util.List;
 
 /**
  * The M1Member class represents a specific member in the Paxos protocol
- * identified as "M1". This class extends the generic Member class
- * and provides specific implementations for handling prepare and accept requests.
+ * identified as "M1". This class uses composition to integrate Paxos functionality
+ * such as proposing and accepting proposals.
  */
 public class M1Member extends Member {
+
+    private final PaxosProposer proposer;
+    private final PaxosAcceptor acceptor;
 
     /**
      * Constructor for M1Member.
@@ -22,6 +27,10 @@ public class M1Member extends Member {
         this.nodeId = "M1"; // Unique identifier for this member
         this.acceptorPort = acceptorPort; // Port number for accepting connections
         this.acceptorAddresses = acceptorAddresses; // List of acceptor addresses
+
+        // Initialize Paxos functionalities using composition
+        this.proposer = new PaxosProposer(this);
+        this.acceptor = new PaxosAcceptor(this);
     }
 
     /**
@@ -32,6 +41,14 @@ public class M1Member extends Member {
     @Override
     public String getProposedValue() {
         return "Suggest M1 to become chairman";
+    }
+
+    /**
+     * Initiates a proposal using the PaxosProposer.
+     */
+    @Override
+    public void propose() {
+        proposer.propose();
     }
 
     /**
@@ -46,6 +63,8 @@ public class M1Member extends Member {
         // Create a new response message
         MessageDTO response = new MessageDTO();
         response.setProposalId(proposalNumber);
+        logger.info("{} PROMISED_PROPOSAL_NUMBER == {}, proposalNumber == {}, proposalNumber >= PROMISED_PROPOSAL_NUMBER.get() is {}",
+                nodeId, Member.PROMISED_PROPOSAL_NUMBER.get(), proposalNumber, proposalNumber >= Member.PROMISED_PROPOSAL_NUMBER.get());
 
         // Check if the proposal number is greater than or equal to the promised number
         if (proposalNumber >= PROMISED_PROPOSAL_NUMBER.get()) {
@@ -55,15 +74,15 @@ public class M1Member extends Member {
                 PROMISED_PROPOSAL_NUMBER.set(proposalNumber);
                 // Set the response type to "AGREE"
                 response.setType("AGREE");
-                logger.info("M1 agree proposalNumber == " + proposalNumber + ", proposal: " + proposalValue);
+                logger.info("M1 agree proposalNumber == {}, proposal: {}", proposalNumber, proposalValue);
             } else {
                 // Log and handle rejection due to an invalid proposal value
-                logger.info("M1 reject proposalNumber == " + proposalNumber + ", proposal: " + proposalValue + ", because not M1!!");
+                logger.info("M1 reject proposalNumber == {}, proposal: {}, because not M1!!", proposalNumber, proposalValue);
             }
         } else {
             // Log and handle rejection due to an outdated proposal number
             response.setType("REJECT");
-            logger.info("M1 reject proposalNumber == " + proposalNumber + ", proposal: " + proposalValue + ", because version outdated!!");
+            logger.info("M1 reject proposalNumber == {}, proposal: {}, because version outdated!!", proposalNumber, proposalValue);
         }
 
         // Serialize the response message to JSON and send it back
@@ -72,7 +91,7 @@ public class M1Member extends Member {
     }
 
     /**
-     * Handles the "ACCEPT" phase of the Paxos protocol.
+     * Handles the "ACCEPT" phase of the Paxos protocol using PaxosAcceptor.
      *
      * @param proposalNumber The proposal number of the incoming request.
      * @param proposalValue  The proposed value from the proposer.
@@ -80,26 +99,7 @@ public class M1Member extends Member {
      */
     @Override
     public void handleAccept(int proposalNumber, String proposalValue, PrintWriter out) {
-        // Create a new response message
-        MessageDTO response = new MessageDTO();
-        response.setProposalId(proposalNumber);
-
-        // Check if the proposal number is greater than or equal to the promised number
-        if (proposalNumber >= PROMISED_PROPOSAL_NUMBER.get()) {
-            // Update the promised proposal number
-            PROMISED_PROPOSAL_NUMBER.set(proposalNumber);
-            // Set the response type to "ACCEPTED"
-            response.setType("ACCEPTED");
-            response.setInfo(proposalValue);
-            logger.info("M1 accepted proposal: {}", proposalValue);
-        } else {
-            // Log and handle rejection due to an outdated proposal number
-            response.setType("REJECT");
-            logger.info("M1 rejected proposal: {}", proposalValue);
-        }
-
-        // Serialize the response message to JSON and send it back
-        out.println(GSON.toJson(response));
+        acceptor.handleAccept(proposalNumber, proposalValue, out);
     }
 
     /**
@@ -108,7 +108,7 @@ public class M1Member extends Member {
      * @return An integer representing the status code for M1.
      */
     @Override
-    protected int getMemberStatusCode() {
+    public int getMemberStatusCode() {
         return 1; // Status code indicating M1's success
     }
 }

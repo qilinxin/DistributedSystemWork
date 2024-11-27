@@ -1,17 +1,22 @@
 package edu.adelaide.council.member;
 
-import edu.adelaide.council.dto.MessageDTO;
+import edu.adelaide.council.paxos.PaxosAcceptor;
 import edu.adelaide.council.paxos.PaxosCoordinator;
+import edu.adelaide.council.paxos.PaxosProposer;
+import edu.adelaide.council.dto.MessageDTO;
 
 import java.io.PrintWriter;
 import java.util.List;
 
 /**
  * The M2Member class represents a specific member in the Paxos protocol
- * identified as "M2". This member has unique behavior, including
- * random connectivity issues that simulate real-world network conditions.
+ * identified as "M2". This class uses composition to integrate Paxos functionality
+ * such as proposing and accepting proposals.
  */
 public class M2Member extends Member {
+
+    private final PaxosProposer proposer;
+    private final PaxosAcceptor acceptor;
 
     // A flag indicating whether M2 is currently at a cafe with poor connectivity
     private static boolean atCafe;
@@ -23,10 +28,13 @@ public class M2Member extends Member {
      * @param acceptorAddresses The list of addresses for other members in the Paxos protocol.
      */
     public M2Member(int acceptorPort, List<String> acceptorAddresses) {
-        this.nodeId = "M2"; // Set unique identifier for this member
-        this.acceptorPort = acceptorPort; // Set the port for accepting connections
-        this.acceptorAddresses = acceptorAddresses; // Store the list of other members' addresses
+        this.nodeId = "M2"; // Unique identifier for this member
+        this.acceptorPort = acceptorPort; // Port number for accepting connections
+        this.acceptorAddresses = acceptorAddresses; // List of acceptor addresses
 
+        // Initialize Paxos functionalities using composition
+        this.proposer = new PaxosProposer(this);
+        this.acceptor = new PaxosAcceptor(this);
         // Simulate random connectivity issues based on a probability calculation
         atCafe = PaxosCoordinator.getRandomWithProbability(
                 1 - (0.33 * Integer.parseInt(PaxosCoordinator.DELAY_VALUE))
@@ -44,23 +52,29 @@ public class M2Member extends Member {
     }
 
     /**
-     * Initiates a proposal process if M2 is not experiencing connectivity issues.
-     * Overrides the default behavior of the propose method in Member class.
+     * Initiates a proposal using the PaxosProposer.
      */
     @Override
     public void propose() {
         // Check connectivity before initiating the proposal
+        if (!checkConnect()) {
+            return;
+        }
+        proposer.propose();
+    }
+
+    private boolean checkConnect() {
+        logger.info("M2 atCafe ======= " + atCafe);
         if (!atCafe) {
             logger.info("M2 has a poor internet connection and may not respond promptly.");
             PaxosCoordinator.setStatusCache(99); // Mark the election process for retry
-            return;
+            return false;
         }
-        // Call the parent class's implementation if connectivity is available
-        super.propose();
+        return true;
     }
 
     /**
-     * Handles the "PREPARE" phase of the Paxos protocol for incoming requests.
+     * Handles the "PREPARE" phase of the Paxos protocol.
      *
      * @param proposalNumber The proposal number of the incoming request.
      * @param proposalValue  The proposed value from the proposer.
@@ -69,11 +83,13 @@ public class M2Member extends Member {
     @Override
     public void handlePrepare(int proposalNumber, String proposalValue, PrintWriter out) {
         // Simulate connectivity issues during the PREPARE phase
-        if (!atCafe) {
-            logger.info("M2 has a poor internet connection and may not respond promptly.");
-            PaxosCoordinator.setStatusCache(99); // Mark the election process for retry
+        if (!checkConnect()) {
             return;
         }
+
+        logger.info("{} PROMISED_PROPOSAL_NUMBER == {}, proposalNumber == {}, proposalNumber >= PROMISED_PROPOSAL_NUMBER.get() is {}",
+                nodeId, Member.PROMISED_PROPOSAL_NUMBER.get(), proposalNumber, proposalNumber >= Member.PROMISED_PROPOSAL_NUMBER.get());
+
 
         // Create a new response message
         MessageDTO response = new MessageDTO();
@@ -81,6 +97,7 @@ public class M2Member extends Member {
 
         // Check if the proposal number is valid and relevant to M2
         if (proposalNumber >= PROMISED_PROPOSAL_NUMBER.get()) {
+            // Check if the proposal value is specific to M2
             if (proposalValue.contains("M2")) {
                 PROMISED_PROPOSAL_NUMBER.set(proposalNumber); // Update the promised proposal number
                 response.setType("AGREE"); // Respond with agreement
@@ -95,13 +112,13 @@ public class M2Member extends Member {
             logger.info("M2 rejected proposalNumber == {}, proposal: {}, because version outdated!", proposalNumber, proposalValue);
         }
 
-        // Serialize the response to JSON and send it back to the proposer
+        // Serialize the response message to JSON and send it back
         String jsonResponse = GSON.toJson(response);
         out.println(jsonResponse);
     }
 
     /**
-     * Handles the "ACCEPT" phase of the Paxos protocol for incoming requests.
+     * Handles the "ACCEPT" phase of the Paxos protocol using PaxosAcceptor.
      *
      * @param proposalNumber The proposal number of the incoming request.
      * @param proposalValue  The proposed value from the proposer.
@@ -109,31 +126,10 @@ public class M2Member extends Member {
      */
     @Override
     public void handleAccept(int proposalNumber, String proposalValue, PrintWriter out) {
-        // Simulate connectivity issues during the ACCEPT phase
-        if (!atCafe) {
-            logger.info("M2 has a poor internet connection and may not respond promptly.");
-            PaxosCoordinator.setStatusCache(99); // Mark the election process for retry
+        if (!checkConnect()) {
             return;
         }
-
-        // Create a new response message
-        MessageDTO response = new MessageDTO();
-        response.setProposalId(proposalNumber);
-
-        // Check if the proposal number is valid for acceptance
-        if (proposalNumber >= PROMISED_PROPOSAL_NUMBER.get()) {
-            PROMISED_PROPOSAL_NUMBER.set(proposalNumber); // Update the promised proposal number
-            response.setType("ACCEPTED"); // Respond with acceptance
-            response.setInfo(proposalValue); // Include the proposal value in the response
-            logger.info("M2 accepted proposal: {}", proposalValue);
-        } else {
-            // Reject the proposal if the proposal number is outdated
-            response.setType("REJECT");
-            logger.info("M2 rejected proposal: {}", proposalValue);
-        }
-
-        // Serialize the response to JSON and send it back to the proposer
-        out.println(GSON.toJson(response));
+        acceptor.handleAccept(proposalNumber, proposalValue, out);
     }
 
     /**
@@ -142,7 +138,7 @@ public class M2Member extends Member {
      * @return An integer representing the status code for M2.
      */
     @Override
-    protected int getMemberStatusCode() {
+    public int getMemberStatusCode() {
         return 2; // Status code indicating M2's success
     }
 }

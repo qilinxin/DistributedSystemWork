@@ -30,7 +30,7 @@ public abstract class Member {
     protected static final Gson GSON = new Gson();
 
     // Atomic variable to track the highest promised proposal number
-    protected static final AtomicInteger PROMISED_PROPOSAL_NUMBER = new AtomicInteger(-1);
+    public static final AtomicInteger PROMISED_PROPOSAL_NUMBER = new AtomicInteger(-1);
 
     // Random generator for simulating network behavior
     protected static final Random RANDOM = new Random();
@@ -83,7 +83,7 @@ public abstract class Member {
         for (String address : acceptorAddresses) {
             boolean success = false;
             int retryCount = 0;
-            int maxRetries = 3;
+            int maxRetries = 10;
 
             // Retry mechanism for handling potential network failures
             while (!success && retryCount < maxRetries) {
@@ -196,7 +196,7 @@ public abstract class Member {
      * @param port The port number on which the acceptor listens.
      */
     public void startAcceptor(int port) {
-        logger.info("{} starting acceptor on port {}", this.getClass().getSimpleName(), port);
+        logger.info("{} starting acceptor on port {}", this.getNodeId(), port);
 
         new Thread(() -> {
             try (ServerSocket serverSocket = new ServerSocket(port)) {
@@ -235,7 +235,7 @@ public abstract class Member {
      *
      * @return An integer representing the status code.
      */
-    protected abstract int getMemberStatusCode();
+    public abstract int getMemberStatusCode();
 
     // Getters and setters for member attributes
 
@@ -253,5 +253,13 @@ public abstract class Member {
 
     public void setAcceptorAddresses(List<String> acceptorAddresses) {
         this.acceptorAddresses = acceptorAddresses;
+    }
+
+    public String getNodeId() {
+        return nodeId;
+    }
+
+    public void setNodeId(String nodeId) {
+        this.nodeId = nodeId;
     }
 }

@@ -2,7 +2,13 @@
 # Paxos Voting Protocol Implementation
 
 ## Overview
-This project implements a Paxos voting protocol for electing a council president among members. The implementation is built to handle various scenarios of distributed consensus, simulating network delays, disconnections, and concurrent proposals.
+This project is a voting system that uses thread pool management and sockets to transmit information. The system will create corresponding threads according to the number of members at startup and start listening on the corresponding port.
+1. Randomly select one between M1-M3
+2. The selected member initiates the voting action
+3. Obtain the opinions of all members
+4. If more than half of them agree, start transmitting the election results
+5. End the election after more than half of the members receive the data
+6. If no consensus is reached, jump to the first step again
 
 ### Project Features
 - **Concurrent Proposal Handling**: The system can handle simultaneous voting proposals from two council members (M1, M2, etc.), ensuring a correct outcome even when proposals conflict.
@@ -13,14 +19,13 @@ This project implements a Paxos voting protocol for electing a council president
 The implementation is evaluated based on the following criteria:
 
 ### 1. Concurrent Proposal Handling - **10 Points**
-The system is tested to ensure that Paxos works correctly when two council members send proposals at the same time. This involves managing conflicting proposals and ensuring that consensus is reached without deadlock or error.
+The case start entry is TestCase1. By passing in different concurrent numbers, multiple proposers are selected to vote at the same time. The system will obtain the correct result based on the proposal version number. For detailed result log, see TestCase1.log
 
 ### 2. Immediate Response from All Members - **30 Points**
-In scenarios where all members (M1 to M9) respond immediately to voting proposals, the implementation should reach consensus efficiently. The test verifies the robustness of the Paxos algorithm in a highly responsive environment.
+The case start entry is TestCase2. In this case, M2 and M3 must participate in the voting process. For the result log, see TestCase2.log
 
 ### 3. Variable Response Delays and Member Disconnection - **30 Points**
-This feature tests the implementation in a dynamic network environment where members have different response times (immediate, small delay, large delay, no response). Additionally, it verifies that the system continues to function correctly when critical members (e.g., M2 or M3) go offline after sending a proposal. The system's resilience is key to meeting this criterion.
-
+The case start entry is TestCase3. In this case, the probability of M2 and M3 being offline is magnified, and they may not be able to participate in the voting. For the result log, see TestCase3.log
 
 ## Configuration
 - **DELAY_VALUE**: You can configure network delay levels to simulate different response times from members. The levels can be set from "0" to "3", with "0" being no delay and "3" representing a large delay.
@@ -31,7 +36,4 @@ This feature tests the implementation in a dynamic network environment where mem
 - **Maven** (for building the project)
 - **SLF4J** for logging
 - **Gson** for serializing and deserializing JSON messages
-
-## Logging
-Logs are handled using SLF4J, and can be configured in the `logback.xml` file. Logs provide detailed information about each step of the proposal and acceptance phases, as well as any retries due to timeouts or disconnections.
 

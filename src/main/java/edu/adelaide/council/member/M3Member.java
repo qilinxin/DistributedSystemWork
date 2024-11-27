@@ -1,7 +1,9 @@
 package edu.adelaide.council.member;
 
-import edu.adelaide.council.dto.MessageDTO;
+import edu.adelaide.council.paxos.PaxosAcceptor;
 import edu.adelaide.council.paxos.PaxosCoordinator;
+import edu.adelaide.council.paxos.PaxosProposer;
+import edu.adelaide.council.dto.MessageDTO;
 
 import java.io.PrintWriter;
 import java.util.List;
@@ -13,6 +15,9 @@ import java.util.List;
  * network failures.
  */
 public class M3Member extends Member {
+
+    private final PaxosProposer proposer;
+    private final PaxosAcceptor acceptor;
 
     // A flag indicating whether M3 is currently disconnected
     private static boolean DISCONNECTED;
@@ -28,6 +33,9 @@ public class M3Member extends Member {
         this.acceptorPort = acceptorPort; // Port number for accepting connections
         this.acceptorAddresses = acceptorAddresses; // List of other members' addresses
 
+        // Initialize Paxos functionalities using composition
+        this.proposer = new PaxosProposer(this);
+        this.acceptor = new PaxosAcceptor(this);
         // Simulate random disconnection based on a probability calculation
         DISCONNECTED = PaxosCoordinator.getRandomWithProbability(
                 0.33 * Integer.parseInt(PaxosCoordinator.DELAY_VALUE)
@@ -50,18 +58,26 @@ public class M3Member extends Member {
      */
     @Override
     public void propose() {
-        // Check if M3 is disconnected before initiating the proposal
-        if (DISCONNECTED) {
-            logger.info("M3 is camping in the Coorong and is completely disconnected.");
-            PaxosCoordinator.setStatusCache(99); // Mark the election process for retry
+        // Check connectivity before initiating the proposal
+        if (!checkConnect()) {
             return;
         }
-        // Call the parent class's implementation if connectivity is available
-        super.propose();
+        proposer.propose();
+    }
+
+    private boolean checkConnect() {
+        logger.info("M3 camping ======= {}", DISCONNECTED);
+
+        if (DISCONNECTED) {
+            logger.info("M3 has a poor internet connection and may not respond promptly.");
+            PaxosCoordinator.setStatusCache(99); // Mark the election process for retry
+            return false;
+        }
+        return true;
     }
 
     /**
-     * Handles the "PREPARE" phase of the Paxos protocol for incoming requests.
+     * Handles the "PREPARE" phase of the Paxos protocol.
      *
      * @param proposalNumber The proposal number of the incoming request.
      * @param proposalValue  The proposed value from the proposer.
@@ -69,12 +85,13 @@ public class M3Member extends Member {
      */
     @Override
     public void handlePrepare(int proposalNumber, String proposalValue, PrintWriter out) {
-        // Check if M3 is disconnected during the PREPARE phase
-        if (DISCONNECTED) {
-            logger.info("M3 is camping in the Coorong and is completely disconnected.");
-            PaxosCoordinator.setStatusCache(99); // Mark the election process for retry
+        // Simulate connectivity issues during the PREPARE phase
+        if (!checkConnect()) {
             return;
         }
+        logger.info("{} PROMISED_PROPOSAL_NUMBER == {}, proposalNumber == {}, proposalNumber >= PROMISED_PROPOSAL_NUMBER.get() is {}",
+                nodeId, Member.PROMISED_PROPOSAL_NUMBER.get(), proposalNumber, proposalNumber >= Member.PROMISED_PROPOSAL_NUMBER.get());
+
 
         // Create a new response message
         MessageDTO response = new MessageDTO();
@@ -86,6 +103,7 @@ public class M3Member extends Member {
 
         // Check if the proposal number is valid and relevant to M3
         if (proposalNumber >= PROMISED_PROPOSAL_NUMBER.get()) {
+            // Check if the proposal value is specific to M3
             if (proposalValue.contains("M3")) {
                 PROMISED_PROPOSAL_NUMBER.set(proposalNumber); // Update the promised proposal number
                 response.setType("AGREE"); // Respond with agreement
@@ -100,13 +118,13 @@ public class M3Member extends Member {
             logger.info("M3 rejected proposalNumber == {}, proposal: {}, because version outdated!", proposalNumber, proposalValue);
         }
 
-        // Serialize the response to JSON and send it back to the proposer
+        // Serialize the response message to JSON and send it back
         String jsonResponse = GSON.toJson(response);
         out.println(jsonResponse);
     }
 
     /**
-     * Handles the "ACCEPT" phase of the Paxos protocol for incoming requests.
+     * Handles the "ACCEPT" phase of the Paxos protocol using PaxosAcceptor.
      *
      * @param proposalNumber The proposal number of the incoming request.
      * @param proposalValue  The proposed value from the proposer.
@@ -114,31 +132,10 @@ public class M3Member extends Member {
      */
     @Override
     public void handleAccept(int proposalNumber, String proposalValue, PrintWriter out) {
-        // Check if M3 is disconnected during the ACCEPT phase
-        if (DISCONNECTED) {
-            logger.info("M3 is camping in the Coorong and is completely disconnected.");
-            PaxosCoordinator.setStatusCache(99); // Mark the election process for retry
+        if (!checkConnect()) {
             return;
         }
-
-        // Create a new response message
-        MessageDTO response = new MessageDTO();
-        response.setProposalId(proposalNumber);
-
-        // Check if the proposal number is valid for acceptance
-        if (proposalNumber >= PROMISED_PROPOSAL_NUMBER.get()) {
-            PROMISED_PROPOSAL_NUMBER.set(proposalNumber); // Update the promised proposal number
-            response.setType("ACCEPTED"); // Respond with acceptance
-            response.setInfo(proposalValue); // Include the proposal value in the response
-            logger.info("M3 accepted proposal: {}", proposalValue);
-        } else {
-            // Reject the proposal if the proposal number is outdated
-            response.setType("REJECT");
-            logger.info("M3 rejected proposal: {}", proposalValue);
-        }
-
-        // Serialize the response to JSON and send it back to the proposer
-        out.println(GSON.toJson(response));
+        acceptor.handleAccept(proposalNumber, proposalValue, out);
     }
 
     /**
@@ -147,7 +144,7 @@ public class M3Member extends Member {
      * @return An integer representing the status code for M3.
      */
     @Override
-    protected int getMemberStatusCode() {
+    public int getMemberStatusCode() {
         return 3; // Status code indicating M3's success
     }
 }
